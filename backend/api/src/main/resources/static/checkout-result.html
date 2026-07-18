@@ -55,7 +55,7 @@
 
   <div class="card">
     <div class="row"><span class="k">거래번호</span><span class="v" id="tid"></span></div>
-    <div class="row"><span class="k">결제수단</span><span class="v" id="pmCd"></span></div>
+    <div class="row"><span class="k">결제수단</span><span class="v" id="payMethod"></span></div>
     <div class="row"><span class="k">결과코드</span><span class="v" id="rsltCd"></span></div>
   </div>
 
@@ -67,7 +67,7 @@
 const p = new URLSearchParams(location.search);
 const PM_NM = { CARD: '카드', VACNT: '가상계좌', MONEY: '머니', POINT: '포인트' };
 const ok = p.get('rsltCd') === '0000';
-const vacnt = p.get('pmCd') === 'VACNT';
+const vacnt = p.get('payMethod') === 'VACNT';
 const mark = document.getElementById('mark');
 
 if (ok && vacnt) {
@@ -90,7 +90,7 @@ if (ok && vacnt) {
 
 document.getElementById('amt').textContent = (Number(p.get('amt')) || 0).toLocaleString() + '원';
 document.getElementById('tid').textContent = p.get('tid') || '-';
-document.getElementById('pmCd').textContent = PM_NM[p.get('pmCd')] || p.get('pmCd') || '-';
+document.getElementById('payMethod').textContent = PM_NM[p.get('payMethod')] || p.get('payMethod') || '-';
 document.getElementById('rsltCd').textContent = p.get('rsltCd') || '-';
 if (ok && !vacnt && p.get('tid')) document.getElementById('btnCancel').style.display = 'block';
 

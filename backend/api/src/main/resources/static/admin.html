@@ -32,7 +32,12 @@
   @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
   label { font-size: 0.75rem; color: var(--mute); display: block; margin: 0 0 4px 2px; }
   .fields { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
-  .fields > div { flex: 1; min-width: 96px; }
+  .fields > div { flex: 1 1 150px; min-width: 150px; }
+  @media (max-width: 600px) { .fields > div { flex: 1 1 100%; } }
+  .prog { display: none; margin-top: 12px; }
+  .prog .bar { height: 10px; background: var(--bg); border-radius: 6px; overflow: hidden; }
+  .prog .fill { height: 100%; width: 0; background: var(--blue); border-radius: 6px; transition: width 0.4s; }
+  .prog .txt { font-size: 0.78rem; color: var(--sub); margin-top: 6px; }
   input, select { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px;
                   font-size: 0.85rem; background: #fff; color: var(--text); }
   select { appearance: none; -webkit-appearance: none;
@@ -79,7 +84,12 @@
           <div><label>일 건수</label><input id="seedPerDay" type="number" value="200"></div>
           <div><label>취소율</label><input id="seedCancel" value="0.1"></div>
         </div>
-        <button class="act" onclick="runSeed()">시딩 실행</button>
+        <button class="act" id="btnSeed" onclick="runSeed()">시딩 실행</button>
+        <button class="act warn" id="btnSeedStop" style="display:none" onclick="stopSeed()">중단 (적재분 유지)</button>
+        <div class="prog" id="seedProg">
+          <div class="bar"><div class="fill" id="seedFill"></div></div>
+          <div class="txt" id="seedTxt"></div>
+        </div>
       </div>
       <div class="card">
         <h3>배치 수동 실행</h3>
@@ -203,14 +213,14 @@ async function post(url, body) {
 }
 /* 컬럼 한글 라벨 — 미등록 키는 원문 유지 */
 const COL_NM = {
-  trSeq: '원장번호', tid: '거래번호', orgTid: '원거래번호', mchtId: '가맹점', pmCd: '결제수단',
-  txStCd: '상태', amt: '금액', trDt: '거래일', trTm: '거래시각', channel: '채널',
+  trSeq: '원장번호', tid: '거래번호', orgTid: '원거래번호', mchtId: '가맹점', payMethod: '결제수단',
+  txStatus: '상태', amt: '금액', trDt: '거래일', trTm: '거래시각', channel: '채널',
   payType: '결제유형', orderId: '주문번호', goodsNm: '상품명', cardNoMasked: '카드번호',
   usrId: '회원', regDt: '등록시각',
-  settleDt: '정산일', trxCnt: '건수', trxAmt: '거래금액', costFee: '원가수수료',
+  settleDt: '정산일', txCnt: '건수', txAmt: '거래금액', costFee: '원가수수료',
   salesFee: '판가수수료', feeVat: '수수료VAT', marginAmt: '마진', payoutAmt: '지급액',
   payoutDt: '지급예정일', stmtStCd: '지급상태',
-  SETTLE_MONTH: '정산월', MCHT_ID: '가맹점', TRX_CNT: '건수', TRX_AMT: '거래금액',
+  SETTLE_MONTH: '정산월', MCHT_ID: '가맹점', TX_CNT: '건수', TX_AMT: '거래금액',
   COST_FEE: '원가수수료', SALES_FEE: '판가수수료', MARGIN_AMT: '마진',
   TID: '거래번호', POOL_SEQ: '풀번호', REQ_ID: '결제요청', AMT: '금액', BANK_CD: '은행코드',
   BANK_NM: '은행', VACNT_NO: '가상계좌번호', EXP_DT: '입금기한', ST_CD: '상태',
@@ -221,7 +231,7 @@ const COL_NM = {
 };
 /* 코드값 한글 치환 */
 const VAL_NM = {
-  txStCd: { '0': '승인', '2': '취소' },
+  txStatus: { APPROVED: '승인', CANCELED: '취소' },
   ST_CD: { '0': '입금대기', '1': '입금완료', '9': '만료' },
   stmtStCd: { '0': '지급예정', '1': '지급완료' },
   USE_FLG: { 'Y': '사용중', 'N': '해지' },
@@ -229,7 +239,7 @@ const VAL_NM = {
   HIST_TYPE: { CHARGE: '충전', PAY: '결제', CANCEL: '취소복원' },
   channel: { LIVE: '실결제', SEED: '시딩' },
   payType: { AUTH: '결제창', KEYIN: '수기', VBANK: '가상계좌', BILLING: '빌링', KAKAO: '카카오페이', PP: '선불' },
-  pmCd: { CARD: '카드', VACNT: '가상계좌', MONEY: '머니', POINT: '포인트' }
+  payMethod: { CARD: '카드', VACNT: '가상계좌', MONEY: '머니', POINT: '포인트' }
 };
 function table(el, rows, actions) {
   const div = document.getElementById(el);
@@ -251,12 +261,38 @@ function fmt(col, v) {
   return String(v);
 }
 
-function runSeed() {
-  post('/api/admin/seed', {
+let seedTimer = null;
+async function runSeed() {
+  const res = await post('/api/admin/seed', {
     fromDt: seedFrom.value, toDt: seedTo.value, perDay: Number(seedPerDay.value),
     cancelRate: Number(seedCancel.value), mismatchRate: 0.02,
     rndSeed: null
   });
+  if (res.rsltCd === '0000' || res.rsltCd === '9100') pollSeed();
+}
+function stopSeed() { post('/api/admin/seed/stop'); }
+function pollSeed() {
+  if (seedTimer) return;
+  document.getElementById('seedProg').style.display = 'block';
+  document.getElementById('btnSeedStop').style.display = 'inline-block';
+  document.getElementById('btnSeed').disabled = true;
+  seedTimer = setInterval(async () => {
+    const s = await fetch('/api/admin/seed/status').then(r => r.json()).catch(() => null);
+    if (!s) return;
+    const pct = s.totalDays ? Math.round(s.doneDays / s.totalDays * 100) : 0;
+    document.getElementById('seedFill').style.width = pct + '%';
+    document.getElementById('seedTxt').textContent =
+      (s.state === 'RUNNING' ? '시딩 중 — ' : '') + (s.doneDays || 0) + '/' + (s.totalDays || 0) + '일 · '
+      + Number(s.rows || 0).toLocaleString() + '행'
+      + (s.state === 'DONE' ? ' · 완료' : '') + (s.state === 'STOPPED' ? ' · 중단됨(적재분 유지)' : '')
+      + (s.msg ? ' — ' + s.msg : '');
+    if (s.state !== 'RUNNING') {
+      clearInterval(seedTimer); seedTimer = null;
+      document.getElementById('btnSeedStop').style.display = 'none';
+      document.getElementById('btnSeed').disabled = false;
+      out(s);
+    }
+  }, 800);
 }
 function runSettle() { post('/api/admin/settle/run?dt=' + batchDt.value); }
 function runPayout() { post('/api/admin/payout/run'); }
@@ -269,7 +305,7 @@ async function loadMargin() {
 }
 async function loadTr() {
   const rows = await fetch('/api/report/tr?dt=' + trDt.value + '&mchtId=' + trMcht.value).then(r => r.json());
-  table('trTbl', rows, r => r.txStCd === '0'
+  table('trTbl', rows, r => r.txStatus === 'APPROVED'
     ? '<button class="act warn sm" onclick="cancelTr(\'' + r.tid + '\')">취소</button>' : '');
 }
 async function cancelTr(tid) { await post('/api/pay/' + tid + '/cancel', { reason: '관리자 취소' }); loadTr(); }

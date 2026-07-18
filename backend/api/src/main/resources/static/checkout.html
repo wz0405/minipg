@@ -358,8 +358,8 @@ function showResult(res) {
   let q = 'rsltCd=' + encodeURIComponent(res.rsltCd || '')
     + '&rsltMsg=' + encodeURIComponent(res.rsltMsg || '')
     + '&tid=' + encodeURIComponent(res.tid || '')
-    + '&amt=' + (res.amt || '') + '&pmCd=' + (res.pmCd || '');
-  if (res.pmCd === 'VACNT') {
+    + '&amt=' + (res.amt || '') + '&payMethod=' + (res.payMethod || '');
+  if (res.payMethod === 'VACNT') {
     q += '&bankNm=' + encodeURIComponent(res.bankNm || '')
       + '&vacntNo=' + (res.vacntNo || '') + '&expDt=' + (res.expDt || '');
   }

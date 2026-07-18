@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>minipg — 미니 PG 결제·정산 파이프라인</title>
+<style>
+  :root {
+    --blue: #3182f6; --text: #191f28; --sub: #4e5968; --mute: #8b95a1;
+    --bg: #f2f4f6; --card: #fff; --line: #e5e8eb; --green: #00a05e;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 44px 16px 48px; }
+  .hero { text-align: center; margin-bottom: 30px; }
+  .hero .logo { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; }
+  .hero .logo b { color: var(--blue); }
+  .hero p { color: var(--sub); font-size: 0.95rem; line-height: 1.6; margin: 10px 0 0; }
+  .flow { background: var(--card); border-radius: 16px; padding: 14px 18px; margin-bottom: 26px;
+          text-align: center; font-size: 0.82rem; color: var(--sub); overflow-x: auto;
+          white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .flow b { color: var(--text); }
+  .flow span { color: var(--mute); margin: 0 6px; }
+  .cards { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  a.big { display: flex; align-items: center; gap: 16px; background: var(--card); border-radius: 20px;
+          padding: 22px; text-decoration: none; color: var(--text);
+          box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: transform 0.06s; }
+  a.big:active { transform: scale(0.99); }
+  a.big .ico { width: 52px; height: 52px; border-radius: 14px; background: var(--bg); flex-shrink: 0;
+               display: flex; align-items: center; justify-content: center; font-size: 1.6rem; }
+  a.big .tit { font-weight: 800; font-size: 1.05rem; }
+  a.big .who { display: inline-block; font-size: 0.7rem; color: var(--blue); background: #eef4ff;
+               border-radius: 6px; padding: 2px 7px; margin-left: 6px; font-weight: 700; vertical-align: 2px; }
+  a.big .desc { color: var(--sub); font-size: 0.84rem; margin-top: 4px; line-height: 1.5; }
+  a.big .chev { margin-left: auto; color: var(--mute); font-size: 1.3rem; }
+  .badges { text-align: center; margin-top: 26px; }
+  .badges span { display: inline-block; background: var(--card); border-radius: 8px; padding: 5px 11px;
+                 font-size: 0.74rem; color: var(--sub); margin: 3px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  footer { text-align: center; color: var(--mute); font-size: 0.72rem; margin-top: 26px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="logo">mini<b>Pg</b></div>
+    <p>결제 승인부터 수수료 산정, 일정산 배치, 지급까지 —<br>PG의 돈이 흐르는 길을 끝까지 구현한 데모입니다.</p>
+  </div>
+
+  <div class="flow">
+    <b>결제</b><span>›</span><b>거래 원장</b><span>›</span><b>수수료 산정</b><span>›</span><b>일정산 배치</b><span>›</span><b>지급</b>
+  </div>
+
+  <div class="cards">
+    <a class="big" href="/checkout.html">
+      <div class="ico">🛍️</div>
+      <div>
+        <div class="tit">결제해 보기<span class="who">구매자</span></div>
+        <div class="desc">카드 결제창·카카오페이·수기결제·가상계좌·머니/포인트 — 실제 PG 테스트 환경으로 승인됩니다</div>
+      </div>
+      <div class="chev">›</div>
+    </a>
+    <a class="big" href="/merchant.html">
+      <div class="ico">🏪</div>
+      <div>
+        <div class="tit">정산 확인하기<span class="who">가맹점</span></div>
+        <div class="desc">수수료는 몇 %인지, 며칠 뒤에 얼마가 입금되는지 — 가맹점 눈높이의 정산 안내</div>
+      </div>
+      <div class="chev">›</div>
+    </a>
+    <a class="big" href="/admin.html">
+      <div class="ico">⚙️</div>
+      <div>
+        <div class="tit">운영해 보기<span class="who">PG 운영자</span></div>
+        <div class="desc">대량 거래 시딩, 일정산·지급 배치 실행, 원장·마진 조회, 가상계좌 풀과 빌키 관리</div>
+      </div>
+      <div class="chev">›</div>
+    </a>
+  </div>
+
+  <div class="badges">
+    <span>INSERT-only 원장</span><span>망취소 프레임</span><span>제휴사 어댑터 확장</span>
+    <span>멱등 정산 배치</span><span>영업일 지급예정</span><span>금액 변조 차단</span>
+  </div>
+
+  <footer>
+    minipg — 포트폴리오 데모 PG · 매일 23시 나이스페이 테스트 환경이 당일 거래를 자동취소하고,<br>
+    다음날 새벽 배치가 취소 반영 정산을 만들어 내는 것까지가 데모입니다.
+  </footer>
+</div>
+</body>
+</html>

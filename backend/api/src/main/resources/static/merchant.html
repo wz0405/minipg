@@ -101,7 +101,7 @@ async function load() {
     '결제일로부터 ' + cycle + '영업일 뒤에 정산금이 입금돼요. 주말·공휴일은 다음 영업일로 넘어가요.';
 
   document.getElementById('fees').innerHTML = info.fees.map(f =>
-    '<div class="fee-row"><span class="k">' + (PM_NM[f.pmCd] || f.pmCd) + ' 수수료</span>'
+    '<div class="fee-row"><span class="k">' + (PM_NM[f.payMethod] || f.payMethod) + ' 수수료</span>'
     + '<span class="v">' + Number(f.feeRate).toFixed(2) + '% <small>+ VAT</small></span></div>'
   ).join('') || '<div class="empty">등록된 수수료 정책이 없어요</div>';
 
@@ -114,7 +114,7 @@ async function load() {
 
   const today = new Date().toISOString().slice(0, 10);
   const tr = await fetch('/api/report/tr?dt=' + today + '&mchtId=' + mchtId).then(r => r.json());
-  const apps = tr.filter(t => t.txStCd === '0');
+  const apps = tr.filter(t => t.txStatus === 'APPROVED');
   document.getElementById('todayCnt').textContent = apps.length + '건';
   document.getElementById('todayAmt').textContent = won(tr.reduce((s, t) => s + t.amt, 0));
 }
@@ -134,7 +134,7 @@ function renderGroups(elId, rows, paid) {
       + (paid ? ' 입금됨' : ' 입금 예정') + '</span><span class="sum' + (paid ? ' paid' : '') + '">'
       + won(sum) + '</span></div>'
       + list.map(r => '<div class="sub-row"><span>' + r.settleDt + ' 거래 · '
-        + (PM_NM[r.pmCd] || r.pmCd) + ' ' + r.trxCnt + '건</span><span>' + won(r.payoutAmt) + '</span></div>').join('')
+        + (PM_NM[r.payMethod] || r.payMethod) + ' ' + r.txCnt + '건</span><span>' + won(r.payoutAmt) + '</span></div>').join('')
       + '</div>';
   }).join('');
 }
