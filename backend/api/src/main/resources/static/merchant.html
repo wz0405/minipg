@@ -13,10 +13,15 @@
   body { margin: 0; background: var(--bg); color: var(--text);
          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif; }
   .wrap { max-width: 560px; margin: 0 auto; padding: 20px 16px 48px; }
-  .top { display: flex; justify-content: space-between; align-items: center; padding: 4px 4px 16px; }
-  .brand { font-weight: 800; font-size: 1.05rem; }
+  .top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;
+         gap: 10px; padding: 4px 4px 16px; }
+  .brand { font-weight: 800; font-size: 1.05rem; text-decoration: none; color: var(--text); }
   .brand b { color: var(--blue); }
-  .top a { color: var(--mute); font-size: 0.78rem; text-decoration: none; margin-left: 10px; }
+  .gnb { display: flex; gap: 6px; }
+  .gnb a { display: flex; align-items: center; gap: 4px; padding: 8px 13px; border-radius: 999px;
+           background: var(--card); color: var(--sub); font-size: 0.78rem; font-weight: 700;
+           text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .gnb a.on { background: var(--blue); color: #fff; }
   select { padding: 10px 14px; font-size: 16px; border: 1px solid var(--line); border-radius: 12px;
            background: #fff; width: 100%; margin-bottom: 14px;
            appearance: none; -webkit-appearance: none;
@@ -51,8 +56,12 @@
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand">mini<b>Pg</b> 가맹점센터</div>
-    <div><a href="/checkout.html">결제 데모</a><a href="/admin.html">운영관리</a></div>
+    <a class="brand" href="/index.html">mini<b>Pg</b></a>
+    <nav class="gnb">
+      <a href="/checkout.html">🛍️ 결제</a>
+      <a class="on" href="/merchant.html">🏪 가맹점센터</a>
+      <a href="/admin.html">⚙️ 운영관리</a>
+    </nav>
   </div>
 
   <select id="mchtId" onchange="load()">
