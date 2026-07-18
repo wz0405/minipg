@@ -1,5 +1,6 @@
 package com.minipg.api.controller;
 
+import com.minipg.api.gate.VanTestClient;
 import com.minipg.common.mapper.StmtMapper;
 import com.minipg.common.service.ReconService;
 import com.minipg.common.service.SeedService;
@@ -25,6 +26,17 @@ public class AdminController {
     private final ReconService reconService;
     private final SeedService seedService;
     private final StmtMapper stmtMapper;
+    private final VanTestClient vanTestClient;
+
+    /** VAN 오프라인 통보 시뮬레이터 — 단말기 대신 고정길이 전문을 게이트에 쏜다 (승인 0200 / 취소 0420). */
+    @PostMapping("/van/simulate")
+    public Map<String, Object> vanSimulate(@RequestBody Map<String, Object> body) {
+        return vanTestClient.send(
+                String.valueOf(body.getOrDefault("msgType", "0200")),
+                String.valueOf(body.get("termNo")),
+                body.get("tid") == null ? null : String.valueOf(body.get("tid")),
+                Long.parseLong(String.valueOf(body.getOrDefault("amt", "1000"))));
+    }
 
     /** 지급 처리 수동 트리거 — 지급예정일 도래분을 지급완료로 전환. */
     @PostMapping("/payout/run")

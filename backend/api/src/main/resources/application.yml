@@ -20,6 +20,8 @@ minipg:
   paygate:
     host: 127.0.0.1
     port: ${PAYGATE_PORT:9090}
+  vangate:
+    port: ${VANGATE_PORT:9095}
 
 nicepay:
   web-base: ${NICEPAY_WEB_BASE:https://web.nicepay.co.kr}

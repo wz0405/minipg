@@ -158,6 +158,22 @@
       <div class="tbl-scroll" id="vacntTbl" style="margin-top:12px"></div>
     </div>
     <div class="card">
+      <h3>오프라인 단말 (VAN 통보)</h3>
+      <p class="desc">단말기에서 이미 승인된 거래가 고정길이 바이너리 전문(80B, EUC-KR)으로 통보됩니다.
+        가맹점은 전문에 없어 단말번호로 역조회하며, 재전송 통보는 멱등 처리됩니다. 아래 버튼이 단말기 역할을 시뮬레이션합니다.</p>
+      <div class="fields">
+        <div><label>단말기</label>
+          <select id="vanTerm">
+            <option value="T1000000001">T1000000001 (데모 스토어)</option>
+            <option value="T1000000002">T1000000002 (데모 카페)</option>
+            <option value="T2000000001">T2000000001 (데모 서점)</option>
+            <option value="T9999999999">T9999999999 (미등록 — 거절 확인용)</option>
+          </select></div>
+        <div><label>금액</label><input id="vanAmt" type="number" value="12000"></div>
+      </div>
+      <button class="act" onclick="vanSimulate()">승인통보 발사 (0200)</button>
+    </div>
+    <div class="card">
       <h3>정기결제 (빌키)</h3>
       <p class="desc">발급은 0원 인증입니다 — 카드 유효성만 확인하고 빌키를 받으며 청구가 없습니다.
         실제 청구는 [회차승인]을 눌렀을 때만 발생합니다. 카드 원본은 저장하지 않습니다.</p>
@@ -329,6 +345,12 @@ async function vacntDeposit(tid) { await post('/api/pay/vacnt/' + tid + '/deposi
 async function vacntWebhook() {
   await post('/api/pay/vacnt/webhook', { vacntNo: whAcct.value, amt: Number(whAmt.value) });
   loadVacnt();
+}
+
+async function vanSimulate() {
+  await post('/api/admin/van/simulate', {
+    msgType: '0200', termNo: vanTerm.value, amt: Number(vanAmt.value)
+  });
 }
 
 async function billRegist() {
