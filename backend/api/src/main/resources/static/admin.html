@@ -209,6 +209,19 @@
 </div>
 
 <script>
+const today = new Date().toISOString().slice(0, 10);
+['seedTo', 'batchDt', 'stmtTo', 'trDt'].forEach(id => document.getElementById(id).value = today);
+const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+document.getElementById('seedFrom').value = monthAgo;
+document.getElementById('stmtFrom').value = monthAgo;
+
+/* 탭 열면 해당 목록을 바로 조회 — [조회] 없이 데이터가 뜨게 (빈 화면 오인 방지).
+   거래내역은 최근 30일로 넓혀 시딩·과거 거래가 바로 보이도록 한다. */
+const AUTO_LOAD = {
+  's-stmt': () => loadStmt(),
+  's-tr': () => loadTr(),
+  's-pm': () => { loadVacnt(); loadBill(); loadPp(); }
+};
 const nav = document.getElementById('nav');
 document.querySelectorAll('section').forEach((s, i) => {
   const b = document.createElement('button');
@@ -219,16 +232,11 @@ document.querySelectorAll('section').forEach((s, i) => {
     s.classList.add('on');
     b.classList.add('on');
     out('결과 로그');
+    if (AUTO_LOAD[s.id]) AUTO_LOAD[s.id]();
   };
   nav.appendChild(b);
   if (i === 0) b.click();
 });
-
-const today = new Date().toISOString().slice(0, 10);
-['seedTo', 'batchDt', 'stmtTo', 'trDt'].forEach(id => document.getElementById(id).value = today);
-const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-document.getElementById('seedFrom').value = monthAgo;
-document.getElementById('stmtFrom').value = monthAgo;
 document.getElementById('marginMonth').value = today.slice(0, 7);
 
 function out(o) { document.getElementById('out').textContent = typeof o === 'string' ? o : JSON.stringify(o, null, 2); }
