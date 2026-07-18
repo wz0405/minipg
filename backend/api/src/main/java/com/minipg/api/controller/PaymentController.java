@@ -98,7 +98,7 @@ public class PaymentController {
                 .queryParam("rsltMsg", nvl(res.get("rsltMsg")))
                 .queryParam("tid", nvl(res.get("tid")))
                 .queryParam("amt", nvl(res.get("amt")))
-                .queryParam("pmCd", nvl(res.get("pmCd")))
+                .queryParam("payMethod", nvl(res.get("payMethod")))
                 .encode(StandardCharsets.UTF_8)
                 .build()
                 .toUriString();
@@ -181,7 +181,7 @@ public class PaymentController {
                 .queryParam("rsltMsg", nvl(res.get("rsltMsg")))
                 .queryParam("tid", nvl(res.get("tid")))
                 .queryParam("amt", nvl(res.get("amt")))
-                .queryParam("pmCd", nvl(res.get("pmCd")))
+                .queryParam("payMethod", nvl(res.get("payMethod")))
                 .encode(StandardCharsets.UTF_8)
                 .build()
                 .toUriString();

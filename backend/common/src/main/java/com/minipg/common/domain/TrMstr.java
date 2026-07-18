@@ -9,7 +9,7 @@ import lombok.AllArgsConstructor;
 
 /**
  * 거래 원장 (TR_MSTR).
- * INSERT-only — 취소는 UPDATE가 아니라 음수 금액의 별도 행(TX_ST_CD='2')으로 적재한다.
+ * INSERT-only — 취소는 UPDATE가 아니라 음수 금액의 별도 행(TX_STATUS='2')으로 적재한다.
  */
 @Data
 @Builder
@@ -17,8 +17,8 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class TrMstr {
 
-    public static final String ST_APPROVAL = "0";
-    public static final String ST_CANCEL = "2";
+    public static final String STATUS_APPROVED = "APPROVED";
+    public static final String STATUS_CANCELED = "CANCELED";
 
     public static final String CH_LIVE = "LIVE";
     public static final String CH_SEED = "SEED";
@@ -27,13 +27,14 @@ public class TrMstr {
     private String tid;
     private String orgTid;
     private String mchtId;
-    private String pmCd;
-    private String txStCd;
+    private String payMethod;
+    private String txStatus;
     private long amt;
     private LocalDate trDt;
     private LocalDateTime trTm;
     private String channel;
     private String payType;
+    private String partnerCd;
     private String orderId;
     private String goodsNm;
     private String cardNoMasked;
@@ -46,13 +47,14 @@ public class TrMstr {
                 .tid(approval.getTid())
                 .orgTid(approval.getTid())
                 .mchtId(approval.getMchtId())
-                .pmCd(approval.getPmCd())
-                .txStCd(ST_CANCEL)
+                .payMethod(approval.getPayMethod())
+                .txStatus(STATUS_CANCELED)
                 .amt(-approval.getAmt())
                 .trDt(cancelTm.toLocalDate())
                 .trTm(cancelTm)
                 .channel(approval.getChannel())
                 .payType(approval.getPayType())
+                .partnerCd(approval.getPartnerCd())
                 .orderId(approval.getOrderId())
                 .goodsNm(approval.getGoodsNm())
                 .cardNoMasked(approval.getCardNoMasked())

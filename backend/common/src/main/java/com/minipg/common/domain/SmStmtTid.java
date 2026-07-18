@@ -17,10 +17,10 @@ public class SmStmtTid {
     private Long stmtTidSeq;
     private LocalDate settleDt;
     private String mchtId;
-    private String pmCd;
+    private String payMethod;
     private Long trSeq;
     private String tid;
-    private String txStCd;
+    private String txStatus;
     private long amt;
     private BigDecimal costRate;
     private BigDecimal salesRate;
@@ -34,10 +34,10 @@ public class SmStmtTid {
         return SmStmtTid.builder()
                 .settleDt(settleDt)
                 .mchtId(tx.getMchtId())
-                .pmCd(tx.getPmCd())
+                .payMethod(tx.getPayMethod())
                 .trSeq(tx.getTrSeq())
                 .tid(tx.getTid())
-                .txStCd(tx.getTxStCd())
+                .txStatus(tx.getTxStatus())
                 .amt(tx.getAmt())
                 .costRate(rate.getCostRate())
                 .salesRate(rate.getSalesRate())

@@ -8,9 +8,9 @@ import lombok.Data;
 public class SmStmt {
     private LocalDate settleDt;
     private String mchtId;
-    private String pmCd;
-    private int trxCnt;
-    private long trxAmt;
+    private String payMethod;
+    private int txCnt;
+    private long txAmt;
     private long costFee;
     private long salesFee;
     private long feeVat;

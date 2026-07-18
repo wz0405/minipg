@@ -12,11 +12,11 @@
 
     <insert id="insertStmtTidBatch">
         INSERT INTO SM_STMT_TID
-            (SETTLE_DT, MCHT_ID, PM_CD, TR_SEQ, TID, TX_ST_CD, AMT,
+            (SETTLE_DT, MCHT_ID, PAY_METHOD, TR_SEQ, TID, TX_STATUS, AMT,
              COST_RATE, SALES_RATE, COST_FEE, SALES_FEE, FEE_VAT, MARGIN_AMT, PAYOUT_AMT)
         VALUES
         <foreach collection="list" item="d" separator=",">
-            (#{d.settleDt}, #{d.mchtId}, #{d.pmCd}, #{d.trSeq}, #{d.tid}, #{d.txStCd}, #{d.amt},
+            (#{d.settleDt}, #{d.mchtId}, #{d.payMethod}, #{d.trSeq}, #{d.tid}, #{d.txStatus}, #{d.amt},
              #{d.costRate}, #{d.salesRate}, #{d.costFee}, #{d.salesFee}, #{d.feeVat}, #{d.marginAmt}, #{d.payoutAmt})
         </foreach>
     </insert>
@@ -24,9 +24,9 @@
     <select id="selectAggregate" resultType="com.minipg.common.domain.SmStmt">
         SELECT SETTLE_DT,
                MCHT_ID,
-               PM_CD,
-               COUNT(*)        AS TRX_CNT,
-               SUM(AMT)        AS TRX_AMT,
+               PAY_METHOD,
+               COUNT(*)        AS TX_CNT,
+               SUM(AMT)        AS TX_AMT,
                SUM(COST_FEE)   AS COST_FEE,
                SUM(SALES_FEE)  AS SALES_FEE,
                SUM(FEE_VAT)    AS FEE_VAT,
@@ -34,15 +34,15 @@
                SUM(PAYOUT_AMT) AS PAYOUT_AMT
           FROM SM_STMT_TID
          WHERE SETTLE_DT = #{settleDt}
-         GROUP BY SETTLE_DT, MCHT_ID, PM_CD
+         GROUP BY SETTLE_DT, MCHT_ID, PAY_METHOD
     </select>
 
     <insert id="insertStmt">
         INSERT INTO SM_STMT
-            (SETTLE_DT, MCHT_ID, PM_CD, TRX_CNT, TRX_AMT, COST_FEE, SALES_FEE,
+            (SETTLE_DT, MCHT_ID, PAY_METHOD, TX_CNT, TX_AMT, COST_FEE, SALES_FEE,
              FEE_VAT, MARGIN_AMT, PAYOUT_AMT, PAYOUT_DT, STMT_ST_CD)
         VALUES
-            (#{settleDt}, #{mchtId}, #{pmCd}, #{trxCnt}, #{trxAmt}, #{costFee}, #{salesFee},
+            (#{settleDt}, #{mchtId}, #{payMethod}, #{txCnt}, #{txAmt}, #{costFee}, #{salesFee},
              #{feeVat}, #{marginAmt}, #{payoutAmt}, #{payoutDt}, '0')
     </insert>
 
@@ -53,7 +53,7 @@
         <if test="mchtId != null and mchtId != ''">
            AND MCHT_ID = #{mchtId}
         </if>
-         ORDER BY SETTLE_DT, MCHT_ID, PM_CD
+         ORDER BY SETTLE_DT, MCHT_ID, PAY_METHOD
     </select>
 
     <select id="selectStmtTid" resultType="com.minipg.common.domain.SmStmtTid">
@@ -78,15 +78,15 @@
           FROM SM_STMT
          WHERE MCHT_ID = #{mchtId}
            AND STMT_ST_CD = #{stmtStCd}
-         ORDER BY PAYOUT_DT <if test="stmtStCd == '1'.toString()">DESC</if>, SETTLE_DT, PM_CD
+         ORDER BY PAYOUT_DT <if test="stmtStCd == '1'.toString()">DESC</if>, SETTLE_DT, PAY_METHOD
          LIMIT 60
     </select>
 
     <select id="selectMarginMonthly" resultType="map">
         SELECT DATE_FORMAT(SETTLE_DT, '%Y-%m') AS SETTLE_MONTH,
                MCHT_ID,
-               SUM(TRX_CNT)    AS TRX_CNT,
-               SUM(TRX_AMT)    AS TRX_AMT,
+               SUM(TX_CNT)    AS TX_CNT,
+               SUM(TX_AMT)    AS TX_AMT,
                SUM(COST_FEE)   AS COST_FEE,
                SUM(SALES_FEE)  AS SALES_FEE,
                SUM(MARGIN_AMT) AS MARGIN_AMT

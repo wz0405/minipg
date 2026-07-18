@@ -7,40 +7,40 @@
     </delete>
 
     <insert id="insertOnlyUs">
-        INSERT INTO RC_RESULT (RECON_DT, TID, TX_ST_CD, DIFF_TYPE, US_AMT, PG_AMT)
-        SELECT #{reconDt}, t.TID, t.TX_ST_CD, 'ONLY_US', t.AMT, NULL
+        INSERT INTO RC_RESULT (RECON_DT, TID, TX_STATUS, DIFF_TYPE, US_AMT, PG_AMT)
+        SELECT #{reconDt}, t.TID, t.TX_STATUS, 'ONLY_US', t.AMT, NULL
           FROM TR_MSTR t
           LEFT JOIN IN_PG_TRX p
             ON p.RECON_DT = #{reconDt}
            AND p.TID = t.TID
-           AND p.TX_ST_CD = t.TX_ST_CD
+           AND p.TX_STATUS = t.TX_STATUS
          WHERE t.TR_DT = #{reconDt}
-           AND t.PM_CD IN ('CARD', 'VACNT')
+           AND t.PAY_METHOD IN ('CARD', 'VACNT')
            AND p.SRC_SEQ IS NULL
     </insert>
 
     <insert id="insertOnlyPg">
-        INSERT INTO RC_RESULT (RECON_DT, TID, TX_ST_CD, DIFF_TYPE, US_AMT, PG_AMT)
-        SELECT #{reconDt}, p.TID, p.TX_ST_CD, 'ONLY_PG', NULL, p.AMT
+        INSERT INTO RC_RESULT (RECON_DT, TID, TX_STATUS, DIFF_TYPE, US_AMT, PG_AMT)
+        SELECT #{reconDt}, p.TID, p.TX_STATUS, 'ONLY_PG', NULL, p.AMT
           FROM IN_PG_TRX p
           LEFT JOIN TR_MSTR t
             ON t.TR_DT = #{reconDt}
            AND t.TID = p.TID
-           AND t.TX_ST_CD = p.TX_ST_CD
+           AND t.TX_STATUS = p.TX_STATUS
          WHERE p.RECON_DT = #{reconDt}
            AND t.TR_SEQ IS NULL
     </insert>
 
     <insert id="insertAmtMismatch">
-        INSERT INTO RC_RESULT (RECON_DT, TID, TX_ST_CD, DIFF_TYPE, US_AMT, PG_AMT)
-        SELECT #{reconDt}, t.TID, t.TX_ST_CD, 'AMT_MISMATCH', t.AMT, p.AMT
+        INSERT INTO RC_RESULT (RECON_DT, TID, TX_STATUS, DIFF_TYPE, US_AMT, PG_AMT)
+        SELECT #{reconDt}, t.TID, t.TX_STATUS, 'AMT_MISMATCH', t.AMT, p.AMT
           FROM TR_MSTR t
           JOIN IN_PG_TRX p
             ON p.RECON_DT = #{reconDt}
            AND p.TID = t.TID
-           AND p.TX_ST_CD = t.TX_ST_CD
+           AND p.TX_STATUS = t.TX_STATUS
          WHERE t.TR_DT = #{reconDt}
-           AND t.PM_CD IN ('CARD', 'VACNT')
+           AND t.PAY_METHOD IN ('CARD', 'VACNT')
            AND t.AMT <![CDATA[<>]]> p.AMT
     </insert>
 
@@ -60,10 +60,10 @@
     </select>
 
     <insert id="insertPgTrxBatch">
-        INSERT INTO IN_PG_TRX (RECON_DT, TID, TX_ST_CD, AMT, SRC_NM)
+        INSERT INTO IN_PG_TRX (RECON_DT, TID, TX_STATUS, AMT, SRC_NM)
         VALUES
         <foreach collection="list" item="p" separator=",">
-            (#{p.reconDt}, #{p.tid}, #{p.txStCd}, #{p.amt}, #{p.srcNm})
+            (#{p.reconDt}, #{p.tid}, #{p.txStatus}, #{p.amt}, #{p.srcNm})
         </foreach>
     </insert>
 
@@ -80,11 +80,11 @@
     </delete>
 
     <insert id="insertMockFromTrMstr">
-        INSERT INTO IN_PG_TRX (RECON_DT, TID, TX_ST_CD, AMT, SRC_NM)
-        SELECT TR_DT, TID, TX_ST_CD, AMT, 'AUTO_MOCK'
+        INSERT INTO IN_PG_TRX (RECON_DT, TID, TX_STATUS, AMT, SRC_NM)
+        SELECT TR_DT, TID, TX_STATUS, AMT, 'AUTO_MOCK'
           FROM TR_MSTR
          WHERE TR_DT = #{reconDt}
-           AND PM_CD IN ('CARD', 'VACNT')
+           AND PAY_METHOD IN ('CARD', 'VACNT')
     </insert>
 
 </mapper>

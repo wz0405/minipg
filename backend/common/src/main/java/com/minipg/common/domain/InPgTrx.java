@@ -15,7 +15,7 @@ public class InPgTrx {
     private Long srcSeq;
     private LocalDate reconDt;
     private String tid;
-    private String txStCd;
+    private String txStatus;
     private long amt;
     private String srcNm;
 }

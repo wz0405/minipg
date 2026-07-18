@@ -9,7 +9,7 @@ public class RcResult {
     private Long resultSeq;
     private LocalDate reconDt;
     private String tid;
-    private String txStCd;
+    private String txStatus;
     private String diffType;
     private Long usAmt;
     private Long pgAmt;

@@ -9,11 +9,11 @@ public class MchtFeeRate {
     private String mchtId;
     private String mchtNm;
     private int settleCycle;
-    private String pmCd;
+    private String payMethod;
     private BigDecimal costRate;
     private BigDecimal salesRate;
 
     public String rateKey() {
-        return mchtId + "|" + pmCd;
+        return mchtId + "|" + payMethod;
     }
 }

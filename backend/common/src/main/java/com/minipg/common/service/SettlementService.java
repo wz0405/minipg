@@ -58,7 +58,7 @@ public class SettlementService {
         List<TrMstr> txs = trMstrMapper.selectByTrDt(settleDt);
         if (txs.isEmpty()) {
             log.info("정산 대상 거래 없음: {}", settleDt);
-            return Map.of("settleDt", settleDt.toString(), "trxCnt", 0, "mchtCnt", 0);
+            return Map.of("settleDt", settleDt.toString(), "txCnt", 0, "mchtCnt", 0);
         }
 
         Map<String, MchtFeeRate> rates = mchtMapper.selectFeeRates(settleDt).stream()
@@ -66,10 +66,10 @@ public class SettlementService {
 
         List<SmStmtTid> details = new ArrayList<>(txs.size());
         for (TrMstr tx : txs) {
-            MchtFeeRate rate = rates.get(tx.getMchtId() + "|" + tx.getPmCd());
+            MchtFeeRate rate = rates.get(tx.getMchtId() + "|" + tx.getPayMethod());
             if (rate == null) {
                 throw new IllegalStateException(
-                        "수수료 정책 없음: " + tx.getMchtId() + "/" + tx.getPmCd() + ", tid=" + tx.getTid());
+                        "수수료 정책 없음: " + tx.getMchtId() + "/" + tx.getPayMethod() + ", tid=" + tx.getTid());
             }
             FeeResult fee = feeCalculator.calculate(tx.getAmt(), rate.getCostRate(), rate.getSalesRate());
             details.add(SmStmtTid.of(settleDt, tx, rate, fee));
@@ -81,12 +81,12 @@ public class SettlementService {
         Set<LocalDate> holidays = new HashSet<>(holidayMapper.selectAll());
         List<SmStmt> aggs = stmtMapper.selectAggregate(settleDt);
         for (SmStmt agg : aggs) {
-            int cycle = rates.get(agg.getMchtId() + "|" + agg.getPmCd()).getSettleCycle();
+            int cycle = rates.get(agg.getMchtId() + "|" + agg.getPayMethod()).getSettleCycle();
             agg.setPayoutDt(businessDayCalculator.addBusinessDays(settleDt, cycle, holidays));
             stmtMapper.insertStmt(agg);
         }
 
         log.info("정산 완료: settleDt={}, 거래 {}건, 가맹점 {}곳", settleDt, txs.size(), aggs.size());
-        return Map.of("settleDt", settleDt.toString(), "trxCnt", txs.size(), "mchtCnt", aggs.size());
+        return Map.of("settleDt", settleDt.toString(), "txCnt", txs.size(), "mchtCnt", aggs.size());
     }
 }

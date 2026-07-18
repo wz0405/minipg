@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -48,13 +49,29 @@ public class AdminController {
         return reconService.run(dt);
     }
 
+    /** 시딩 시작 — 백그라운드 실행, 진행률은 /seed/status로 폴링. */
     @PostMapping("/seed")
     public Map<String, Object> seed(@RequestBody SeedRequest req) {
-        return seedService.seed(req.fromDt(), req.toDt(),
+        boolean started = seedService.start(req.fromDt(), req.toDt(),
                 req.perDay() > 0 ? req.perDay() : 100,
                 req.cancelRate() != null ? req.cancelRate() : 0.1,
                 req.mismatchRate() != null ? req.mismatchRate() : 0.02,
                 req.rndSeed());
+        return started
+                ? Map.of("rsltCd", "0000", "rsltMsg", "시딩 시작")
+                : Map.of("rsltCd", "9100", "rsltMsg", "이미 시딩이 실행 중입니다");
+    }
+
+    @GetMapping("/seed/status")
+    public Map<String, Object> seedStatus() {
+        return seedService.status();
+    }
+
+    /** 시딩 중단 — 그때까지 적재분은 유지한다 (재시딩이 멱등이라 다시 돌리면 정리됨). */
+    @PostMapping("/seed/stop")
+    public Map<String, Object> seedStop() {
+        seedService.requestStop();
+        return Map.of("rsltCd", "0000", "rsltMsg", "중단 요청됨");
     }
 
     public record SeedRequest(

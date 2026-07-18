@@ -4,21 +4,21 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="trSeq">
         INSERT INTO TR_MSTR
-            (TID, ORG_TID, MCHT_ID, PM_CD, TX_ST_CD, AMT, TR_DT, TR_TM,
-             CHANNEL, PAY_TYPE, ORDER_ID, GOODS_NM, CARD_NO_MASKED, USR_ID)
+            (TID, ORG_TID, MCHT_ID, PAY_METHOD, TX_STATUS, AMT, TR_DT, TR_TM,
+             CHANNEL, PAY_TYPE, PARTNER_CD, ORDER_ID, GOODS_NM, CARD_NO_MASKED, USR_ID)
         VALUES
-            (#{tid}, #{orgTid}, #{mchtId}, #{pmCd}, #{txStCd}, #{amt}, #{trDt}, #{trTm},
-             #{channel}, #{payType}, #{orderId}, #{goodsNm}, #{cardNoMasked}, #{usrId})
+            (#{tid}, #{orgTid}, #{mchtId}, #{payMethod}, #{txStatus}, #{amt}, #{trDt}, #{trTm},
+             #{channel}, #{payType}, #{partnerCd}, #{orderId}, #{goodsNm}, #{cardNoMasked}, #{usrId})
     </insert>
 
     <insert id="insertBatch">
         INSERT INTO TR_MSTR
-            (TID, ORG_TID, MCHT_ID, PM_CD, TX_ST_CD, AMT, TR_DT, TR_TM,
-             CHANNEL, PAY_TYPE, ORDER_ID, GOODS_NM, CARD_NO_MASKED, USR_ID)
+            (TID, ORG_TID, MCHT_ID, PAY_METHOD, TX_STATUS, AMT, TR_DT, TR_TM,
+             CHANNEL, PAY_TYPE, PARTNER_CD, ORDER_ID, GOODS_NM, CARD_NO_MASKED, USR_ID)
         VALUES
         <foreach collection="list" item="t" separator=",">
-            (#{t.tid}, #{t.orgTid}, #{t.mchtId}, #{t.pmCd}, #{t.txStCd}, #{t.amt}, #{t.trDt}, #{t.trTm},
-             #{t.channel}, #{t.payType}, #{t.orderId}, #{t.goodsNm}, #{t.cardNoMasked}, #{t.usrId})
+            (#{t.tid}, #{t.orgTid}, #{t.mchtId}, #{t.payMethod}, #{t.txStatus}, #{t.amt}, #{t.trDt}, #{t.trTm},
+             #{t.channel}, #{t.payType}, #{t.partnerCd}, #{t.orderId}, #{t.goodsNm}, #{t.cardNoMasked}, #{t.usrId})
         </foreach>
     </insert>
 
@@ -42,14 +42,14 @@
         SELECT *
           FROM TR_MSTR
          WHERE TID = #{tid}
-           AND TX_ST_CD = '0'
+           AND TX_STATUS = 'APPROVED'
     </select>
 
     <select id="countCancel" resultType="int">
         SELECT COUNT(*)
           FROM TR_MSTR
          WHERE TID = #{tid}
-           AND TX_ST_CD = '2'
+           AND TX_STATUS = 'CANCELED'
     </select>
 
     <delete id="deleteSeedByOriginDate">
@@ -64,11 +64,11 @@
           FROM TR_MSTR a
           LEFT JOIN TR_MSTR c
             ON c.TID = a.TID
-           AND c.TX_ST_CD = '2'
+           AND c.TX_STATUS = 'CANCELED'
          WHERE a.TR_DT = #{trDt}
-           AND a.TX_ST_CD = '0'
+           AND a.TX_STATUS = 'APPROVED'
            AND a.CHANNEL = 'LIVE'
-           AND a.PM_CD = 'CARD'
+           AND a.PAY_METHOD = 'CARD'
            AND c.TR_SEQ IS NULL
     </select>
 

@@ -59,7 +59,7 @@ public class ReportController {
         List<Map<String, Object>> fees = mchtMapper.selectFeeRates(LocalDate.now()).stream()
                 .filter(r -> mchtId.equals(r.getMchtId()))
                 .map(r -> Map.<String, Object>of(
-                        "pmCd", r.getPmCd(),
+                        "payMethod", r.getPayMethod(),
                         "feeRate", r.getSalesRate(),
                         "settleCycle", r.getSettleCycle()))
                 .toList();

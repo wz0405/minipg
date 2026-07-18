@@ -15,30 +15,39 @@
 | 일정산 | batch | 04:00 | 전일 거래 → 건별 수수료 → 가맹점별 집계 + 지급예정일 |
 | 거래대사 | batch | 05:00 | 전일 원장 vs PG 거래내역 (TID, 상태) 키 대조 |
 
-## 2. 아키텍처 — 결제 게이트웨이
+## 2. 아키텍처 — 프로세스 템플릿 + 제휴사 어댑터
 
 ```
-Flutter / 가맹점(웹) 
+브라우저 / 가맹점(웹)
    │ HTTP
    ▼
-PaymentController (프로토콜 변환만)
+컨트롤러 (프로토콜 변환만)
    │ loopback TCP — 개행 구분 JSON 전문
    ▼
 PayGateServer (Netty)
    ├─ 이벤트루프: 프레이밍(LineBasedFrameDecoder) + 디코딩까지만
-   └─ PayGateHandler → 가상스레드 executor로 비즈니스 격리
+   └─ PayGateHandler: getBean("process|" + cmd) — 전문 코드가 곧 라우팅
                           │
                           ▼
-                    PaymentService ──► NicepayClient (제휴사 통신)
+              AbstractPayProcess (모든 업무의 공통 골격)
+                ├ before : 검증 (결제요청 대조·금액·잔액·원거래)
+                ├ do     : 제휴사 통신 — 트랜잭션 밖
+                │            getBean("partner|" + 제휴사코드)  ← PartnerAdapter
+                ├ after  : 원장 반영 — 트랜잭션 안, 실패 시 프레임이 망취소
+                └ postCommit : 커밋 후 별도 스레드 (가맹점 서버통보)
                           │
                           ▼
-                       TR_MSTR (INSERT-only)
+                    TR_MSTR (INSERT-only, PARTNER_CD 보유)
 ```
 
 설계 의도: 대외계 수신부(전문 게이트웨이)와 동일한 계층 구조.
 이벤트루프에 DB 대기·제휴사 API 지연이 올라가면 게이트웨이 전체가 멈추므로,
 블로킹 작업은 전부 전용 executor(가상스레드)로 내려보낸다.
 HTTP는 어댑터일 뿐 결제의 단일 진입점은 게이트웨이 전문이다.
+
+업무 추가 = AbstractPayProcess 상속 빈("process|전문코드") 등록,
+제휴사 추가 = PartnerAdapter 구현 빈("partner|제휴사코드") 등록이 전부다.
+취소는 원장의 PARTNER_CD로 어댑터를 역룩업하므로 제휴사가 늘어도 취소 코드는 하나다.
 
 ## 3. 테이블 사전
 
@@ -47,7 +56,7 @@ HTTP는 어댑터일 뿐 결제의 단일 진입점은 게이트웨이 전문이
 | SI_MCHT | 가맹점 | SETTLE_CYCLE = 지급주기(N영업일) |
 | SI_PTN_FEE | 원가 수수료 정책 | (가맹점, 수단, 적용일) 이력 관리 |
 | SI_STMT_FEE | 판가 수수료 정책 | 〃 |
-| TR_MSTR | 거래 원장 | **INSERT-only.** 취소 = 음수 금액 별도행(TX_ST_CD='2'), ORG_TID = 원거래 TID |
+| TR_MSTR | 거래 원장 | **INSERT-only.** 취소 = 음수 금액 별도행(TX_STATUS='2'), ORG_TID = 원거래 TID |
 | SM_STMT_TID | 건별 정산 | 배치 시점 적용요율·계산결과 스냅샷 |
 | SM_STMT | 일 정산 집계 | (정산일, 가맹점) PK, 지급예정일 포함 |
 | IN_PG_TRX | PG 거래내역 수신 | 대사의 PG측 소스 (시딩 생성/AUTO_MOCK/파일) |
@@ -73,7 +82,7 @@ HTTP는 어댑터일 뿐 결제의 단일 진입점은 게이트웨이 전문이
 
 ## 5. 거래대사
 
-매칭 키: `(TID, TX_ST_CD)` — 승인과 취소를 각각 독립된 행으로 대조.
+매칭 키: `(TID, TX_STATUS)` — 승인과 취소를 각각 독립된 행으로 대조.
 
 | 유형 | 의미 | 의심 원인 |
 |---|---|---|
@@ -96,8 +105,8 @@ AUTO_MOCK 미러를 만들어 대사가 성립하게 한다.
 | v3 | 선불 머니/포인트 | **자체 원장** — 회원 매체 잔액 충전/결제/취소 | PG 무관, 자체 구현 |
 | 제외 | 실시간 계좌이체/휴대폰 | 샌드박스 실시간 승인 불가 | README 확장 포인트로만 명시 |
 
-모든 수단은 TR_MSTR의 `PM_CD` 축으로 수렴하므로 정산·대사 파이프라인 수정 없이 추가된다.
-수단별 수수료는 SI_PTN_FEE / SI_STMT_FEE의 PM_CD 행 추가로 대응한다.
+모든 수단은 TR_MSTR의 `PAY_METHOD` 축으로 수렴하므로 정산·대사 파이프라인 수정 없이 추가된다.
+수단별 수수료는 SI_PTN_FEE / SI_STMT_FEE의 PAY_METHOD 행 추가로 대응한다.
 
 ## 7. 가맹점 연동 (호스티드 결제)
 
