@@ -99,7 +99,8 @@ euc-kr 폼)와 카카오페이(REST: ready→redirect→pg_token 승인)처럼 �
 | 모듈 | 역할 |
 |---|---|
 | `backend/common` | 도메인·매퍼·수수료 산식·정산/시딩 서비스 (api/batch 공유) |
-| `backend/api` | 결제 게이트웨이 + REST + 데모 화면 |
+| `backend/api` | 결제 게이트웨이(전문·프로세스·어댑터) + REST |
+| `backend/api/src/main/resources/static` | 화면 전부 — 랜딩·결제·가맹점센터·운영관리 (호스티드 결제창이라 결제 서버가 직접 서빙) |
 | `backend/batch` | @Scheduled: 04:00 일정산 → 06:00 지급 / 23:30 자동취소 동기화 / 00:10 계좌풀 회수 |
 | `infra` | docker-compose (MariaDB + api + batch), 스키마 |
 
