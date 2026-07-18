@@ -1,0 +1,64 @@
+services:
+  db:
+    image: mariadb:11
+    container_name: minipg-db
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-minipgroot1!}
+      MARIADB_DATABASE: minipg
+      MARIADB_USER: ${DB_USER:-minipg}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-minipg1!}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./db:/docker-entrypoint-initdb.d:ro
+      - minipg-dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      retries: 6
+
+  api:
+    build:
+      context: ../backend
+      args:
+        MODULE: api
+    container_name: minipg-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:mariadb://db:3306/minipg
+      DB_USER: ${DB_USER:-minipg}
+      DB_PASSWORD: ${DB_PASSWORD:-minipg1!}
+      NICEPAY_AUTH_MID: ${NICEPAY_AUTH_MID:-}
+      NICEPAY_AUTH_KEY: ${NICEPAY_AUTH_KEY:-}
+      NICEPAY_KEYIN_MID: ${NICEPAY_KEYIN_MID:-}
+      NICEPAY_KEYIN_KEY: ${NICEPAY_KEYIN_KEY:-}
+      JAVA_OPTS: -Xmx256m
+    ports:
+      - "8080:8080"
+
+  batch:
+    build:
+      context: ../backend
+      args:
+        MODULE: batch
+    container_name: minipg-batch
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:mariadb://db:3306/minipg
+      DB_USER: ${DB_USER:-minipg}
+      DB_PASSWORD: ${DB_PASSWORD:-minipg1!}
+      TZ: Asia/Seoul
+      JAVA_OPTS: -Xmx192m
+    ports:
+      - "8081:8081"
+
+volumes:
+  minipg-dbdata:

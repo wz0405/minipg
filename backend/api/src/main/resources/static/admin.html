@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>minipg 운영관리</title>
+<style>
+  :root {
+    --blue: #3182f6; --text: #191f28; --sub: #4e5968; --mute: #8b95a1;
+    --bg: #f2f4f6; --card: #fff; --line: #e5e8eb; --danger: #f04452; --green: #00a05e;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-size: 0.88rem;
+         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 24px 16px 48px; }
+  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+  .brand { font-weight: 800; font-size: 1.1rem; letter-spacing: -0.02em; }
+  .brand b { color: var(--blue); }
+  .top a { color: var(--mute); font-size: 0.8rem; text-decoration: none; margin-left: 12px; }
+  nav { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  nav button { padding: 10px 18px; border: 0; border-radius: 12px; background: var(--card);
+               color: var(--sub); cursor: pointer; font-size: 0.88rem; font-weight: 700;
+               box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  nav button.on { background: var(--blue); color: #fff; }
+  section { display: none; }
+  section.on { display: block; }
+  .card { background: var(--card); border-radius: 16px; padding: 20px; margin-bottom: 12px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .card h3 { margin: 0 0 4px; font-size: 0.98rem; letter-spacing: -0.01em; }
+  .card .desc { color: var(--mute); font-size: 0.78rem; margin: 0 0 14px; line-height: 1.5; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+  label { font-size: 0.75rem; color: var(--mute); display: block; margin: 0 0 4px 2px; }
+  .fields { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+  .fields > div { flex: 1; min-width: 96px; }
+  input, select { width: 100%; padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px;
+                  font-size: 0.85rem; background: #fff; color: var(--text); }
+  select { appearance: none; -webkit-appearance: none;
+           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238b95a1' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+           background-repeat: no-repeat; background-position: right 11px center; padding-right: 30px; }
+  input:focus, select:focus { outline: none; border-color: var(--blue); }
+  @media (max-width: 600px) { input, select { font-size: 16px; } }
+  .act { padding: 10px 18px; border: 0; border-radius: 10px; background: var(--blue); color: #fff;
+         cursor: pointer; font-weight: 700; font-size: 0.85rem; margin-right: 6px; }
+  .act.warn { background: var(--danger); }
+  .act.green { background: var(--green); }
+  .act.ghost { background: var(--bg); color: var(--sub); }
+  .act.sm { padding: 5px 10px; font-size: 0.73rem; border-radius: 7px; }
+  table { border-collapse: collapse; width: 100%; margin-top: 4px; font-size: 0.78rem; }
+  th, td { border-bottom: 1px solid var(--bg); padding: 8px 9px; text-align: right; white-space: nowrap; }
+  th { color: var(--mute); font-weight: 600; text-align: right; background: #fafbfc;
+       position: sticky; top: 0; }
+  td:first-child, th:first-child { text-align: left; }
+  tr:hover td { background: #fafbfc; }
+  .tbl-scroll { overflow: auto; max-height: 440px; border: 1px solid var(--bg); border-radius: 12px; }
+  .empty { color: var(--mute); text-align: center; padding: 20px; font-size: 0.8rem; }
+  #out { padding: 14px; background: #1c2333; color: #cfe0ff; border-radius: 14px;
+         font-family: Consolas, monospace; font-size: 0.74rem; white-space: pre-wrap;
+         word-break: break-all; min-height: 44px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">mini<b>Pg</b> 운영관리</div>
+    <div><a href="/checkout.html">결제 데모</a><a href="/merchant.html">가맹점센터</a></div>
+  </div>
+  <nav id="nav"></nav>
+
+  <!-- 배치·시딩 -->
+  <section id="s-ops" data-nm="배치·시딩">
+    <div class="grid2">
+      <div class="card">
+        <h3>거래 시딩</h3>
+        <p class="desc">정산 파이프라인에 태울 대량 거래를 만듭니다. 같은 기간 재실행 시 기존 시딩을 지우고 다시 생성합니다(멱등).</p>
+        <div class="fields">
+          <div><label>시작일</label><input id="seedFrom" type="date"></div>
+          <div><label>종료일</label><input id="seedTo" type="date"></div>
+          <div><label>일 건수</label><input id="seedPerDay" type="number" value="200"></div>
+          <div><label>취소율</label><input id="seedCancel" value="0.1"></div>
+        </div>
+        <button class="act" onclick="runSeed()">시딩 실행</button>
+      </div>
+      <div class="card">
+        <h3>배치 수동 실행</h3>
+        <p class="desc">운영 스케줄 — 23:30 자동취소 동기화 · 04:00 일정산 · 06:00 지급 처리 · 00:10 가상계좌 만료회수. 재실행은 멱등입니다.</p>
+        <div class="fields">
+          <div><label>정산 대상일</label><input id="batchDt" type="date"></div>
+        </div>
+        <button class="act" onclick="runSettle()">일정산 실행</button>
+        <button class="act green" onclick="runPayout()">지급 처리</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 정산 리포트 -->
+  <section id="s-stmt" data-nm="정산 리포트">
+    <div class="card">
+      <h3>일정산 · 월 마진</h3>
+      <p class="desc">가맹점 × 결제수단 그레인. 마진(판가-원가)은 PG 내부 지표라 이 화면에만 노출됩니다.</p>
+      <div class="fields">
+        <div><label>시작일</label><input id="stmtFrom" type="date"></div>
+        <div><label>종료일</label><input id="stmtTo" type="date"></div>
+        <div><label>마진 조회 월</label><input id="marginMonth" placeholder="2026-07"></div>
+      </div>
+      <button class="act" onclick="loadStmt()">일정산 조회</button>
+      <button class="act ghost" onclick="loadMargin()">월 마진 조회</button>
+      <div class="tbl-scroll" id="stmtTbl" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- 거래내역 -->
+  <section id="s-tr" data-nm="거래내역">
+    <div class="card">
+      <h3>거래 원장</h3>
+      <p class="desc">승인·취소 전 행이 INSERT-only로 남습니다. 취소는 음수 금액의 별도 행입니다.</p>
+      <div class="fields">
+        <div><label>거래일</label><input id="trDt" type="date"></div>
+        <div><label>가맹점</label>
+          <select id="trMcht"><option value="">전체</option><option>demostore01</option><option>democafe02</option><option>demobooks03</option></select></div>
+      </div>
+      <button class="act" onclick="loadTr()">조회</button>
+      <div class="tbl-scroll" id="trTbl" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- 수단 관리 -->
+  <section id="s-pm" data-nm="수단 관리">
+    <div class="card">
+      <h3>가상계좌</h3>
+      <p class="desc">제휴사 벌크 계좌풀에서 채번하고, 입금통보 웹훅이 도착하면 원장에 적재됩니다. 만료 채번은 배치가 풀로 회수합니다.</p>
+      <div class="fields">
+        <div><label>계좌번호 (웹훅 테스트)</label><input id="whAcct" placeholder="채번된 계좌번호"></div>
+        <div><label>입금액</label><input id="whAmt" type="number" placeholder="금액"></div>
+      </div>
+      <button class="act ghost" onclick="loadVacnt()">채번 현황</button>
+      <button class="act green" onclick="vacntWebhook()">입금통보 발사</button>
+      <div class="tbl-scroll" id="vacntTbl" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <h3>정기결제 (빌키)</h3>
+      <p class="desc">발급은 0원 인증입니다 — 카드 유효성만 확인하고 빌키를 받으며 청구가 없습니다.
+        실제 청구는 [회차승인]을 눌렀을 때만 발생합니다. 카드 원본은 저장하지 않습니다.</p>
+      <div class="fields">
+        <div style="min-width:150px"><label>카드번호</label><input id="bCardNo" maxlength="16"></div>
+        <div style="max-width:70px"><label>MM</label><input id="bExpMonth" maxlength="2"></div>
+        <div style="max-width:70px"><label>YY</label><input id="bExpYear" maxlength="2"></div>
+        <div style="max-width:110px"><label>생년월일 6</label><input id="bIdNo" maxlength="6"></div>
+        <div style="max-width:80px"><label>비번 앞2</label><input id="bCardPw" type="password" maxlength="2"></div>
+        <div><label>가맹점</label>
+          <select id="bMcht"><option>demostore01</option><option>democafe02</option><option>demobooks03</option></select></div>
+        <div style="max-width:110px"><label>회차 금액</label><input id="bAmt" type="number" value="100"></div>
+      </div>
+      <button class="act" onclick="billRegist()">빌키 발급</button>
+      <div class="tbl-scroll" id="billTbl" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <h3>선불 (머니·포인트)</h3>
+      <p class="desc">잔액 UPDATE는 조건부(잔액부족 원자 차단), 모든 변동은 이력으로 남습니다. 충전 후 결제 데모에서 사용해 보세요.</p>
+      <div class="fields">
+        <div><label>회원</label><select id="ppUser"></select></div>
+        <div><label>매체</label><select id="ppType"><option value="MONEY">머니</option><option value="POINT">포인트</option></select></div>
+        <div><label>충전액</label><input id="ppAmt" type="number" value="10000"></div>
+      </div>
+      <button class="act green" onclick="ppCharge()">충전</button>
+      <button class="act ghost" onclick="loadPp()">잔액·이력 조회</button>
+      <div class="tbl-scroll" id="ppTbl" style="margin-top:12px"></div>
+      <div class="tbl-scroll" id="ppHistTbl" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <div id="out">결과 로그</div>
+</div>
+
+<script>
+const nav = document.getElementById('nav');
+document.querySelectorAll('section').forEach((s, i) => {
+  const b = document.createElement('button');
+  b.textContent = s.dataset.nm;
+  b.onclick = () => {
+    document.querySelectorAll('section').forEach(x => x.classList.remove('on'));
+    nav.querySelectorAll('button').forEach(x => x.classList.remove('on'));
+    s.classList.add('on');
+    b.classList.add('on');
+    out('결과 로그');
+  };
+  nav.appendChild(b);
+  if (i === 0) b.click();
+});
+
+const today = new Date().toISOString().slice(0, 10);
+['seedTo', 'batchDt', 'stmtTo', 'trDt'].forEach(id => document.getElementById(id).value = today);
+const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+document.getElementById('seedFrom').value = monthAgo;
+document.getElementById('stmtFrom').value = monthAgo;
+document.getElementById('marginMonth').value = today.slice(0, 7);
+
+function out(o) { document.getElementById('out').textContent = typeof o === 'string' ? o : JSON.stringify(o, null, 2); }
+async function post(url, body) {
+  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : '{}' }).then(r => r.json()).catch(e => ({ error: String(e) }));
+  out(res); return res;
+}
+/* 컬럼 한글 라벨 — 미등록 키는 원문 유지 */
+const COL_NM = {
+  trSeq: '원장번호', tid: '거래번호', orgTid: '원거래번호', mchtId: '가맹점', pmCd: '결제수단',
+  txStCd: '상태', amt: '금액', trDt: '거래일', trTm: '거래시각', channel: '채널',
+  payType: '결제유형', orderId: '주문번호', goodsNm: '상품명', cardNoMasked: '카드번호',
+  usrId: '회원', regDt: '등록시각',
+  settleDt: '정산일', trxCnt: '건수', trxAmt: '거래금액', costFee: '원가수수료',
+  salesFee: '판가수수료', feeVat: '수수료VAT', marginAmt: '마진', payoutAmt: '지급액',
+  payoutDt: '지급예정일', stmtStCd: '지급상태',
+  SETTLE_MONTH: '정산월', MCHT_ID: '가맹점', TRX_CNT: '건수', TRX_AMT: '거래금액',
+  COST_FEE: '원가수수료', SALES_FEE: '판가수수료', MARGIN_AMT: '마진',
+  TID: '거래번호', POOL_SEQ: '풀번호', REQ_ID: '결제요청', AMT: '금액', BANK_CD: '은행코드',
+  BANK_NM: '은행', VACNT_NO: '가상계좌번호', EXP_DT: '입금기한', ST_CD: '상태',
+  REG_DT: '등록시각', DPST_DT: '입금시각',
+  BID: '빌키', MOID: '발급주문번호', USE_FLG: '상태', CARD_NO_MASKED: '카드번호',
+  USR_ID: '회원', USR_NM: '회원명', PP_TYPE: '매체', BLNC: '잔액',
+  HIST_SEQ: '번호', HIST_TYPE: '유형', BLNC_AFTER: '잔액(후)'
+};
+/* 코드값 한글 치환 */
+const VAL_NM = {
+  txStCd: { '0': '승인', '2': '취소' },
+  ST_CD: { '0': '입금대기', '1': '입금완료', '9': '만료' },
+  stmtStCd: { '0': '지급예정', '1': '지급완료' },
+  USE_FLG: { 'Y': '사용중', 'N': '해지' },
+  PP_TYPE: { MONEY: '머니', POINT: '포인트' },
+  HIST_TYPE: { CHARGE: '충전', PAY: '결제', CANCEL: '취소복원' },
+  channel: { LIVE: '실결제', SEED: '시딩' },
+  payType: { AUTH: '결제창', KEYIN: '수기', VBANK: '가상계좌', BILLING: '빌링', KAKAO: '카카오페이', PP: '선불' },
+  pmCd: { CARD: '카드', VACNT: '가상계좌', MONEY: '머니', POINT: '포인트' }
+};
+function table(el, rows, actions) {
+  const div = document.getElementById(el);
+  if (!rows || !rows.length) { div.innerHTML = '<div class="empty">데이터 없음</div>'; return; }
+  const cols = Object.keys(rows[0]);
+  /* 액션은 첫 컬럼 — 모바일 가로 스크롤에 밀려 안 보이는 문제 방지 */
+  let html = '<table><tr>' + (actions ? '<th></th>' : '')
+    + cols.map(c => '<th>' + (COL_NM[c] || c) + '</th>').join('') + '</tr>';
+  rows.forEach(r => {
+    html += '<tr>' + (actions ? '<td style="text-align:center">' + actions(r) + '</td>' : '')
+      + cols.map(c => '<td>' + fmt(c, r[c]) + '</td>').join('') + '</tr>';
+  });
+  div.innerHTML = html + '</table>';
+}
+function fmt(col, v) {
+  if (v === null || v === undefined) return '';
+  if (VAL_NM[col] && VAL_NM[col][String(v)] !== undefined) return VAL_NM[col][String(v)];
+  if (typeof v === 'number' && Math.abs(v) >= 1000) return v.toLocaleString();
+  return String(v);
+}
+
+function runSeed() {
+  post('/api/admin/seed', {
+    fromDt: seedFrom.value, toDt: seedTo.value, perDay: Number(seedPerDay.value),
+    cancelRate: Number(seedCancel.value), mismatchRate: 0.02,
+    rndSeed: null
+  });
+}
+function runSettle() { post('/api/admin/settle/run?dt=' + batchDt.value); }
+function runPayout() { post('/api/admin/payout/run'); }
+
+async function loadStmt() {
+  table('stmtTbl', await fetch('/api/report/stmt?fromDt=' + stmtFrom.value + '&toDt=' + stmtTo.value).then(r => r.json()));
+}
+async function loadMargin() {
+  table('stmtTbl', await fetch('/api/report/margin?month=' + marginMonth.value).then(r => r.json()));
+}
+async function loadTr() {
+  const rows = await fetch('/api/report/tr?dt=' + trDt.value + '&mchtId=' + trMcht.value).then(r => r.json());
+  table('trTbl', rows, r => r.txStCd === '0'
+    ? '<button class="act warn sm" onclick="cancelTr(\'' + r.tid + '\')">취소</button>' : '');
+}
+async function cancelTr(tid) { await post('/api/pay/' + tid + '/cancel', { reason: '관리자 취소' }); loadTr(); }
+
+async function loadVacnt() {
+  const rows = await fetch('/api/pay/vacnt').then(r => r.json());
+  table('vacntTbl', rows, r => r.ST_CD === '0'
+    ? '<button class="act green sm" onclick="vacntDeposit(\'' + r.TID + '\')">모의입금</button>' : '');
+}
+async function vacntDeposit(tid) { await post('/api/pay/vacnt/' + tid + '/deposit'); loadVacnt(); }
+async function vacntWebhook() {
+  await post('/api/pay/vacnt/webhook', { vacntNo: whAcct.value, amt: Number(whAmt.value) });
+  loadVacnt();
+}
+
+async function billRegist() {
+  await post('/api/pay/billing/regist', {
+    cardNo: bCardNo.value, expMonth: bExpMonth.value, expYear: bExpYear.value,
+    idNo: bIdNo.value, cardPw: bCardPw.value, mchtId: bMcht.value
+  });
+  loadBill();
+}
+async function loadBill() {
+  const rows = await fetch('/api/pay/billing').then(r => r.json());
+  table('billTbl', rows, r => r.USE_FLG === 'Y'
+    ? '<button class="act sm" onclick="billApprove(\'' + r.BID + '\')">회차승인</button>'
+    + '<button class="act warn sm" onclick="billRemove(\'' + r.BID + '\')">삭제</button>' : '');
+}
+async function billApprove(bid) { await post('/api/pay/billing/' + bid + '/approve', { amt: Number(bAmt.value) }); }
+async function billRemove(bid) {
+  await fetch('/api/pay/billing/' + bid, { method: 'DELETE' }).then(r => r.json()).then(out);
+  loadBill();
+}
+
+async function loadPp() {
+  table('ppTbl', await fetch('/api/pay/pp/users').then(r => r.json()));
+  table('ppHistTbl', await fetch('/api/pay/pp/hist/' + ppUser.value).then(r => r.json()));
+}
+async function ppCharge() {
+  await post('/api/pay/pp/charge', { usrId: ppUser.value, ppType: ppType.value, amt: Number(ppAmt.value) });
+  loadPp();
+}
+fetch('/api/pay/pp/users').then(r => r.json()).then(rows => {
+  [...new Set(rows.map(r => r.USR_ID))].forEach(id => {
+    const opt = document.createElement('option');
+    opt.value = id; opt.textContent = id;
+    document.getElementById('ppUser').appendChild(opt);
+  });
+});
+loadBill();
+</script>
+</body>
+</html>

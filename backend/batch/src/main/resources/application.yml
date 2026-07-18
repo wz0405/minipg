@@ -1,0 +1,24 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: minipg-batch
+  datasource:
+    url: ${DB_URL:jdbc:mariadb://localhost:3307/minipg}
+    username: ${DB_USER:minipg}
+    password: ${DB_PASSWORD:minipg1!}
+    driver-class-name: org.mariadb.jdbc.Driver
+
+mybatis:
+  mapper-locations: classpath*:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+minipg:
+  cron:
+    settle: "0 0 4 * * *"
+    recon: "0 0 5 * * *"
+    payout: "0 0 6 * * *"
+    auto-cancel-sync: "0 30 23 * * *"
+    vacnt-expire: "0 10 0 * * *"

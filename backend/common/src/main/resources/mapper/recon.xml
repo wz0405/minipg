@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.minipg.common.mapper.ReconMapper">
+
+    <delete id="deleteResult">
+        DELETE FROM RC_RESULT WHERE RECON_DT = #{reconDt}
+    </delete>
+
+    <insert id="insertOnlyUs">
+        INSERT INTO RC_RESULT (RECON_DT, TID, TX_ST_CD, DIFF_TYPE, US_AMT, PG_AMT)
+        SELECT #{reconDt}, t.TID, t.TX_ST_CD, 'ONLY_US', t.AMT, NULL
+          FROM TR_MSTR t
+          LEFT JOIN IN_PG_TRX p
+            ON p.RECON_DT = #{reconDt}
+           AND p.TID = t.TID
+           AND p.TX_ST_CD = t.TX_ST_CD
+         WHERE t.TR_DT = #{reconDt}
+           AND t.PM_CD IN ('CARD', 'VACNT')
+           AND p.SRC_SEQ IS NULL
+    </insert>
+
+    <insert id="insertOnlyPg">
+        INSERT INTO RC_RESULT (RECON_DT, TID, TX_ST_CD, DIFF_TYPE, US_AMT, PG_AMT)
+        SELECT #{reconDt}, p.TID, p.TX_ST_CD, 'ONLY_PG', NULL, p.AMT
+          FROM IN_PG_TRX p
+          LEFT JOIN TR_MSTR t
+            ON t.TR_DT = #{reconDt}
+           AND t.TID = p.TID
+           AND t.TX_ST_CD = p.TX_ST_CD
+         WHERE p.RECON_DT = #{reconDt}
+           AND t.TR_SEQ IS NULL
+    </insert>
+
+    <insert id="insertAmtMismatch">
+        INSERT INTO RC_RESULT (RECON_DT, TID, TX_ST_CD, DIFF_TYPE, US_AMT, PG_AMT)
+        SELECT #{reconDt}, t.TID, t.TX_ST_CD, 'AMT_MISMATCH', t.AMT, p.AMT
+          FROM TR_MSTR t
+          JOIN IN_PG_TRX p
+            ON p.RECON_DT = #{reconDt}
+           AND p.TID = t.TID
+           AND p.TX_ST_CD = t.TX_ST_CD
+         WHERE t.TR_DT = #{reconDt}
+           AND t.PM_CD IN ('CARD', 'VACNT')
+           AND t.AMT <![CDATA[<>]]> p.AMT
+    </insert>
+
+    <select id="selectResult" resultType="com.minipg.common.domain.RcResult">
+        SELECT *
+          FROM RC_RESULT
+         WHERE RECON_DT = #{reconDt}
+         ORDER BY DIFF_TYPE, TID
+    </select>
+
+    <select id="selectSummary" resultType="map">
+        SELECT DIFF_TYPE,
+               COUNT(*) AS CNT
+          FROM RC_RESULT
+         WHERE RECON_DT = #{reconDt}
+         GROUP BY DIFF_TYPE
+    </select>
+
+    <insert id="insertPgTrxBatch">
+        INSERT INTO IN_PG_TRX (RECON_DT, TID, TX_ST_CD, AMT, SRC_NM)
+        VALUES
+        <foreach collection="list" item="p" separator=",">
+            (#{p.reconDt}, #{p.tid}, #{p.txStCd}, #{p.amt}, #{p.srcNm})
+        </foreach>
+    </insert>
+
+    <select id="countPgTrx" resultType="int">
+        SELECT COUNT(*)
+          FROM IN_PG_TRX
+         WHERE RECON_DT = #{reconDt}
+    </select>
+
+    <delete id="deleteSeedSrc">
+        DELETE FROM IN_PG_TRX
+         WHERE SRC_NM = 'SEED_GEN'
+           AND RECON_DT BETWEEN #{fromDt} AND #{toDt}
+    </delete>
+
+    <insert id="insertMockFromTrMstr">
+        INSERT INTO IN_PG_TRX (RECON_DT, TID, TX_ST_CD, AMT, SRC_NM)
+        SELECT TR_DT, TID, TX_ST_CD, AMT, 'AUTO_MOCK'
+          FROM TR_MSTR
+         WHERE TR_DT = #{reconDt}
+           AND PM_CD IN ('CARD', 'VACNT')
+    </insert>
+
+</mapper>

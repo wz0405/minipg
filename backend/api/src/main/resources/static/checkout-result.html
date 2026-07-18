@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>결제 결과</title>
+<style>
+  :root {
+    --blue: #3182f6; --text: #191f28; --sub: #4e5968; --mute: #8b95a1;
+    --bg: #f2f4f6; --card: #fff; --line: #e5e8eb; --danger: #f04452; --green: #00a05e;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif; }
+  .wrap { max-width: 460px; margin: 0 auto; padding: 48px 16px 40px; text-align: center; }
+  .mark { width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 18px;
+          display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #fff; }
+  .mark.ok { background: var(--blue); }
+  .mark.wait { background: var(--green); }
+  .mark.fail { background: var(--danger); }
+  h1 { font-size: 1.3rem; letter-spacing: -0.02em; margin: 0 0 4px; }
+  .amt { font-size: 2rem; font-weight: 800; margin: 8px 0 20px; }
+  .card { background: var(--card); border-radius: 20px; padding: 6px 20px; text-align: left;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 12px; }
+  .row { display: flex; justify-content: space-between; padding: 13px 0; border-bottom: 1px solid var(--bg);
+         font-size: 0.88rem; }
+  .row:last-child { border-bottom: 0; }
+  .row .k { color: var(--mute); }
+  .row .v { font-weight: 600; max-width: 65%; word-break: break-all; text-align: right; }
+  .vacct { background: #eef4ff; border-radius: 16px; padding: 16px 20px; text-align: left;
+           margin-bottom: 12px; }
+  .vacct .bank { color: var(--sub); font-size: 0.85rem; }
+  .vacct .no { font-size: 1.25rem; font-weight: 800; letter-spacing: 0.02em; margin: 4px 0; }
+  .vacct .exp { color: var(--mute); font-size: 0.78rem; }
+  .btn { display: block; width: 100%; padding: 16px; border: 0; border-radius: 14px;
+         background: var(--blue); color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer;
+         text-decoration: none; margin-top: 8px; }
+  .btn.ghost { background: #e8ebee; color: var(--sub); }
+  .btn.warn { background: #fff; color: var(--danger); border: 1px solid var(--line); }
+  .msg { color: var(--sub); font-size: 0.88rem; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mark" id="mark">✓</div>
+  <h1 id="title"></h1>
+  <div class="msg" id="msg"></div>
+  <div class="amt" id="amt"></div>
+
+  <div class="vacct" id="vacct" style="display:none">
+    <div class="bank" id="vBank"></div>
+    <div class="no" id="vNo"></div>
+    <div class="exp" id="vExp"></div>
+  </div>
+
+  <div class="card">
+    <div class="row"><span class="k">거래번호</span><span class="v" id="tid"></span></div>
+    <div class="row"><span class="k">결제수단</span><span class="v" id="pmCd"></span></div>
+    <div class="row"><span class="k">결과코드</span><span class="v" id="rsltCd"></span></div>
+  </div>
+
+  <button class="btn" id="btnDeposit" style="display:none" onclick="mockDeposit()">입금 완료하기 (입금통보 시뮬레이션)</button>
+  <a class="btn ghost" href="/checkout.html">다시 결제하기</a>
+  <button class="btn warn" id="btnCancel" style="display:none" onclick="cancelPay()">이 결제 취소하기</button>
+</div>
+<script>
+const p = new URLSearchParams(location.search);
+const PM_NM = { CARD: '카드', VACNT: '가상계좌', MONEY: '머니', POINT: '포인트' };
+const ok = p.get('rsltCd') === '0000';
+const vacnt = p.get('pmCd') === 'VACNT';
+const mark = document.getElementById('mark');
+
+if (ok && vacnt) {
+  mark.className = 'mark wait'; mark.textContent = '🏦';
+  document.getElementById('title').textContent = '입금 계좌가 발급됐어요';
+  document.getElementById('msg').textContent = '아래 계좌로 입금하면 결제가 완료돼요';
+  document.getElementById('vacct').style.display = 'block';
+  document.getElementById('vBank').textContent = p.get('bankNm') || '';
+  document.getElementById('vNo').textContent = (p.get('vacntNo') || '').replace(/(\d{4})(?=\d)/g, '$1 ');
+  const e = p.get('expDt') || '';
+  document.getElementById('vExp').textContent = e ? '입금기한 ' + e.slice(0,4) + '.' + e.slice(4,6) + '.' + e.slice(6,8) : '';
+  document.getElementById('btnDeposit').style.display = 'block';
+} else if (ok) {
+  document.getElementById('title').textContent = '결제를 완료했어요';
+} else {
+  mark.className = 'mark fail'; mark.textContent = '!';
+  document.getElementById('title').textContent = '결제하지 못했어요';
+  document.getElementById('msg').textContent = p.get('rsltMsg') || '잠시 후 다시 시도해 주세요';
+}
+
+document.getElementById('amt').textContent = (Number(p.get('amt')) || 0).toLocaleString() + '원';
+document.getElementById('tid').textContent = p.get('tid') || '-';
+document.getElementById('pmCd').textContent = PM_NM[p.get('pmCd')] || p.get('pmCd') || '-';
+document.getElementById('rsltCd').textContent = p.get('rsltCd') || '-';
+if (ok && !vacnt && p.get('tid')) document.getElementById('btnCancel').style.display = 'block';
+
+function mockDeposit() {
+  fetch('/api/pay/vacnt/' + p.get('tid') + '/deposit', { method: 'POST' })
+    .then(r => r.json()).then(res => {
+      if (res.rsltCd === '0000') {
+        mark.className = 'mark ok'; mark.textContent = '✓';
+        document.getElementById('title').textContent = '입금이 확인됐어요';
+        document.getElementById('msg').textContent = '결제가 완료됐어요';
+        document.getElementById('btnDeposit').style.display = 'none';
+        document.getElementById('btnCancel').style.display = 'block';
+      } else {
+        alert(res.rsltMsg);
+      }
+    });
+}
+
+function cancelPay() {
+  fetch('/api/pay/' + p.get('tid') + '/cancel', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason: '고객 요청 취소' })
+  }).then(r => r.json()).then(res => {
+    alert(res.rsltCd === '0000' ? '취소가 완료됐어요' : '취소 실패: ' + res.rsltMsg);
+    if (res.rsltCd === '0000') location.href = '/checkout.html';
+  });
+}
+</script>
+</body>
+</html>

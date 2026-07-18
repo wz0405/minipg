@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>가맹점센터 — 정산</title>
+<style>
+  :root {
+    --blue: #3182f6; --text: #191f28; --sub: #4e5968; --mute: #8b95a1;
+    --bg: #f2f4f6; --card: #fff; --line: #e5e8eb; --green: #00a05e;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 20px 16px 48px; }
+  .top { display: flex; justify-content: space-between; align-items: center; padding: 4px 4px 16px; }
+  .brand { font-weight: 800; font-size: 1.05rem; }
+  .brand b { color: var(--blue); }
+  .top a { color: var(--mute); font-size: 0.78rem; text-decoration: none; margin-left: 10px; }
+  select { padding: 10px 14px; font-size: 16px; border: 1px solid var(--line); border-radius: 12px;
+           background: #fff; width: 100%; margin-bottom: 14px;
+           appearance: none; -webkit-appearance: none;
+           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238b95a1' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+           background-repeat: no-repeat; background-position: right 14px center; padding-right: 34px; }
+  .card { background: var(--card); border-radius: 20px; padding: 20px; margin-bottom: 12px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  h2 { font-size: 1.05rem; margin: 0 0 6px; letter-spacing: -0.02em; }
+  .lead { color: var(--sub); font-size: 0.85rem; margin: 0 0 14px; line-height: 1.5; }
+  .fee-row { display: flex; justify-content: space-between; padding: 10px 0; font-size: 0.9rem;
+             border-bottom: 1px solid var(--bg); }
+  .fee-row:last-child { border-bottom: 0; }
+  .fee-row .k { color: var(--sub); }
+  .fee-row .v { font-weight: 700; }
+  .fee-row .v small { color: var(--mute); font-weight: 400; }
+  .day { margin-bottom: 6px; }
+  .day-head { display: flex; justify-content: space-between; align-items: baseline; padding: 12px 4px 6px; }
+  .day-head .d { font-weight: 700; font-size: 0.92rem; }
+  .day-head .sum { font-weight: 800; font-size: 1.02rem; }
+  .day-head .sum.paid { color: var(--green); }
+  .sub-row { display: flex; justify-content: space-between; background: var(--bg); border-radius: 10px;
+             padding: 9px 14px; margin-bottom: 5px; font-size: 0.82rem; color: var(--sub); }
+  .empty { color: var(--mute); font-size: 0.85rem; text-align: center; padding: 18px 0; }
+  .today { display: flex; gap: 10px; }
+  .today .box { flex: 1; background: var(--bg); border-radius: 14px; padding: 14px; text-align: center; }
+  .today .n { font-weight: 800; font-size: 1.15rem; }
+  .today .l { color: var(--mute); font-size: 0.75rem; margin-top: 2px; }
+  .badge { display: inline-block; background: #eef4ff; color: var(--blue); border-radius: 8px;
+           font-size: 0.72rem; padding: 3px 8px; margin-left: 6px; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">mini<b>Pg</b> 가맹점센터</div>
+    <div><a href="/checkout.html">결제 데모</a><a href="/admin.html">운영관리</a></div>
+  </div>
+
+  <select id="mchtId" onchange="load()">
+    <option value="demostore01">데모 스토어</option>
+    <option value="democafe02">데모 카페</option>
+    <option value="demobooks03">데모 서점</option>
+  </select>
+
+  <div class="card">
+    <h2>이렇게 정산받고 있어요</h2>
+    <p class="lead" id="cycleLead">정산 주기를 불러오는 중…</p>
+    <div id="fees"></div>
+  </div>
+
+  <div class="card">
+    <h2>오늘 거래</h2>
+    <div class="today">
+      <div class="box"><div class="n" id="todayCnt">-</div><div class="l">승인 건수</div></div>
+      <div class="box"><div class="n" id="todayAmt">-</div><div class="l">승인 금액</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>입금 예정 <span class="badge" id="upcomingBadge"></span></h2>
+    <p class="lead">거래일 기준으로 계산된 정산금이 지급예정일에 입금돼요</p>
+    <div id="upcoming"></div>
+  </div>
+
+  <div class="card">
+    <h2>입금 완료</h2>
+    <div id="paid"></div>
+  </div>
+</div>
+<script>
+const PM_NM = { CARD: '카드', VACNT: '가상계좌', MONEY: '머니', POINT: '포인트' };
+const won = n => Number(n).toLocaleString() + '원';
+const dfmt = s => { const d = new Date(s); return (d.getMonth()+1) + '/' + d.getDate()
+  + ' (' + ['일','월','화','수','목','금','토'][d.getDay()] + ')'; };
+
+async function load() {
+  const mchtId = document.getElementById('mchtId').value;
+  const info = await fetch('/api/report/merchant/' + mchtId + '/settle-info').then(r => r.json());
+
+  const cycle = info.fees.length ? info.fees[0].settleCycle : 2;
+  document.getElementById('cycleLead').textContent =
+    '결제일로부터 ' + cycle + '영업일 뒤에 정산금이 입금돼요. 주말·공휴일은 다음 영업일로 넘어가요.';
+
+  document.getElementById('fees').innerHTML = info.fees.map(f =>
+    '<div class="fee-row"><span class="k">' + (PM_NM[f.pmCd] || f.pmCd) + ' 수수료</span>'
+    + '<span class="v">' + Number(f.feeRate).toFixed(2) + '% <small>+ VAT</small></span></div>'
+  ).join('') || '<div class="empty">등록된 수수료 정책이 없어요</div>';
+
+  renderGroups('upcoming', info.upcoming, false);
+  renderGroups('paid', info.paid, true);
+  const total = (info.upcoming || []).reduce((s, r) => s + r.payoutAmt, 0);
+  const badge = document.getElementById('upcomingBadge');
+  badge.textContent = total > 0 ? '총 ' + won(total) : '';
+  badge.style.display = total > 0 ? 'inline-block' : 'none';
+
+  const today = new Date().toISOString().slice(0, 10);
+  const tr = await fetch('/api/report/tr?dt=' + today + '&mchtId=' + mchtId).then(r => r.json());
+  const apps = tr.filter(t => t.txStCd === '0');
+  document.getElementById('todayCnt').textContent = apps.length + '건';
+  document.getElementById('todayAmt').textContent = won(tr.reduce((s, t) => s + t.amt, 0));
+}
+
+function renderGroups(elId, rows, paid) {
+  const el = document.getElementById(elId);
+  if (!rows || !rows.length) {
+    el.innerHTML = '<div class="empty">' + (paid ? '아직 입금 완료된 정산이 없어요' : '입금 예정인 정산이 없어요') + '</div>';
+    return;
+  }
+  const byDate = {};
+  rows.forEach(r => (byDate[r.payoutDt] = byDate[r.payoutDt] || []).push(r));
+  el.innerHTML = Object.keys(byDate).map(dt => {
+    const list = byDate[dt];
+    const sum = list.reduce((s, r) => s + r.payoutAmt, 0);
+    return '<div class="day"><div class="day-head"><span class="d">' + dfmt(dt)
+      + (paid ? ' 입금됨' : ' 입금 예정') + '</span><span class="sum' + (paid ? ' paid' : '') + '">'
+      + won(sum) + '</span></div>'
+      + list.map(r => '<div class="sub-row"><span>' + r.settleDt + ' 거래 · '
+        + (PM_NM[r.pmCd] || r.pmCd) + ' ' + r.trxCnt + '건</span><span>' + won(r.payoutAmt) + '</span></div>').join('')
+      + '</div>';
+  }).join('');
+}
+load();
+</script>
+</body>
+</html>

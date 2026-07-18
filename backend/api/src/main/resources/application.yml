@@ -1,0 +1,33 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: minipg-api
+  datasource:
+    url: ${DB_URL:jdbc:mariadb://localhost:3307/minipg}
+    username: ${DB_USER:minipg}
+    password: ${DB_PASSWORD:minipg1!}
+    driver-class-name: org.mariadb.jdbc.Driver
+
+mybatis:
+  mapper-locations: classpath*:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+minipg:
+  paygate:
+    host: 127.0.0.1
+    port: ${PAYGATE_PORT:9090}
+
+nicepay:
+  web-base: ${NICEPAY_WEB_BASE:https://web.nicepay.co.kr}
+  api-base: ${NICEPAY_API_BASE:https://webapi.nicepay.co.kr}
+  auth-mid: ${NICEPAY_AUTH_MID:}
+  auth-key: ${NICEPAY_AUTH_KEY:}
+  keyin-mid: ${NICEPAY_KEYIN_MID:}
+  keyin-key: ${NICEPAY_KEYIN_KEY:}
+
+kakaopay:
+  admin-key: ${KAKAOPAY_ADMIN_KEY:}
+  cid: ${KAKAOPAY_CID:TC0ONETIME}

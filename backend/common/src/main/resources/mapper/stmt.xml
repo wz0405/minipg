@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.minipg.common.mapper.StmtMapper">
+
+    <delete id="deleteStmt">
+        DELETE FROM SM_STMT WHERE SETTLE_DT = #{settleDt}
+    </delete>
+
+    <delete id="deleteStmtTid">
+        DELETE FROM SM_STMT_TID WHERE SETTLE_DT = #{settleDt}
+    </delete>
+
+    <insert id="insertStmtTidBatch">
+        INSERT INTO SM_STMT_TID
+            (SETTLE_DT, MCHT_ID, PM_CD, TR_SEQ, TID, TX_ST_CD, AMT,
+             COST_RATE, SALES_RATE, COST_FEE, SALES_FEE, FEE_VAT, MARGIN_AMT, PAYOUT_AMT)
+        VALUES
+        <foreach collection="list" item="d" separator=",">
+            (#{d.settleDt}, #{d.mchtId}, #{d.pmCd}, #{d.trSeq}, #{d.tid}, #{d.txStCd}, #{d.amt},
+             #{d.costRate}, #{d.salesRate}, #{d.costFee}, #{d.salesFee}, #{d.feeVat}, #{d.marginAmt}, #{d.payoutAmt})
+        </foreach>
+    </insert>
+
+    <select id="selectAggregate" resultType="com.minipg.common.domain.SmStmt">
+        SELECT SETTLE_DT,
+               MCHT_ID,
+               PM_CD,
+               COUNT(*)        AS TRX_CNT,
+               SUM(AMT)        AS TRX_AMT,
+               SUM(COST_FEE)   AS COST_FEE,
+               SUM(SALES_FEE)  AS SALES_FEE,
+               SUM(FEE_VAT)    AS FEE_VAT,
+               SUM(MARGIN_AMT) AS MARGIN_AMT,
+               SUM(PAYOUT_AMT) AS PAYOUT_AMT
+          FROM SM_STMT_TID
+         WHERE SETTLE_DT = #{settleDt}
+         GROUP BY SETTLE_DT, MCHT_ID, PM_CD
+    </select>
+
+    <insert id="insertStmt">
+        INSERT INTO SM_STMT
+            (SETTLE_DT, MCHT_ID, PM_CD, TRX_CNT, TRX_AMT, COST_FEE, SALES_FEE,
+             FEE_VAT, MARGIN_AMT, PAYOUT_AMT, PAYOUT_DT, STMT_ST_CD)
+        VALUES
+            (#{settleDt}, #{mchtId}, #{pmCd}, #{trxCnt}, #{trxAmt}, #{costFee}, #{salesFee},
+             #{feeVat}, #{marginAmt}, #{payoutAmt}, #{payoutDt}, '0')
+    </insert>
+
+    <select id="selectStmt" resultType="com.minipg.common.domain.SmStmt">
+        SELECT *
+          FROM SM_STMT
+         WHERE SETTLE_DT BETWEEN #{fromDt} AND #{toDt}
+        <if test="mchtId != null and mchtId != ''">
+           AND MCHT_ID = #{mchtId}
+        </if>
+         ORDER BY SETTLE_DT, MCHT_ID, PM_CD
+    </select>
+
+    <select id="selectStmtTid" resultType="com.minipg.common.domain.SmStmtTid">
+        SELECT *
+          FROM SM_STMT_TID
+         WHERE SETTLE_DT = #{settleDt}
+        <if test="mchtId != null and mchtId != ''">
+           AND MCHT_ID = #{mchtId}
+        </if>
+         ORDER BY STMT_TID_SEQ
+    </select>
+
+    <update id="markPaidDue">
+        UPDATE SM_STMT
+           SET STMT_ST_CD = '1'
+         WHERE STMT_ST_CD = '0'
+           AND PAYOUT_DT <![CDATA[<=]]> #{today}
+    </update>
+
+    <select id="selectByMchtAndStatus" resultType="com.minipg.common.domain.SmStmt">
+        SELECT *
+          FROM SM_STMT
+         WHERE MCHT_ID = #{mchtId}
+           AND STMT_ST_CD = #{stmtStCd}
+         ORDER BY PAYOUT_DT <if test="stmtStCd == '1'.toString()">DESC</if>, SETTLE_DT, PM_CD
+         LIMIT 60
+    </select>
+
+    <select id="selectMarginMonthly" resultType="map">
+        SELECT DATE_FORMAT(SETTLE_DT, '%Y-%m') AS SETTLE_MONTH,
+               MCHT_ID,
+               SUM(TRX_CNT)    AS TRX_CNT,
+               SUM(TRX_AMT)    AS TRX_AMT,
+               SUM(COST_FEE)   AS COST_FEE,
+               SUM(SALES_FEE)  AS SALES_FEE,
+               SUM(MARGIN_AMT) AS MARGIN_AMT
+          FROM SM_STMT
+         WHERE DATE_FORMAT(SETTLE_DT, '%Y-%m') = #{month}
+         GROUP BY DATE_FORMAT(SETTLE_DT, '%Y-%m'), MCHT_ID
+         ORDER BY MCHT_ID
+    </select>
+
+</mapper>

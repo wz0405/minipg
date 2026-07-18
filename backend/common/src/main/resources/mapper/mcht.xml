@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.minipg.common.mapper.MchtMapper">
+
+    <select id="selectFeeRates" resultType="com.minipg.common.domain.MchtFeeRate">
+        SELECT m.MCHT_ID,
+               m.MCHT_NM,
+               m.SETTLE_CYCLE,
+               pf.PM_CD,
+               pf.FEE_RATE AS COST_RATE,
+               sf.FEE_RATE AS SALES_RATE
+          FROM SI_MCHT m
+          JOIN SI_PTN_FEE pf
+            ON pf.MCHT_ID = m.MCHT_ID
+           AND pf.APPLY_DT = (SELECT MAX(x.APPLY_DT)
+                                FROM SI_PTN_FEE x
+                               WHERE x.MCHT_ID = pf.MCHT_ID
+                                 AND x.PM_CD = pf.PM_CD
+                                 AND x.APPLY_DT <![CDATA[<=]]> #{baseDt})
+          JOIN SI_STMT_FEE sf
+            ON sf.MCHT_ID = m.MCHT_ID
+           AND sf.PM_CD = pf.PM_CD
+           AND sf.APPLY_DT = (SELECT MAX(y.APPLY_DT)
+                                FROM SI_STMT_FEE y
+                               WHERE y.MCHT_ID = sf.MCHT_ID
+                                 AND y.PM_CD = sf.PM_CD
+                                 AND y.APPLY_DT <![CDATA[<=]]> #{baseDt})
+         WHERE m.USE_FLG = 'Y'
+    </select>
+
+    <select id="selectMchtList" resultType="map">
+        SELECT MCHT_ID,
+               MCHT_NM,
+               SETTLE_CYCLE
+          FROM SI_MCHT
+         WHERE USE_FLG = 'Y'
+         ORDER BY MCHT_ID
+    </select>
+
+</mapper>
