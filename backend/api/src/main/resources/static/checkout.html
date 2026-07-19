@@ -153,13 +153,28 @@
     </div>
   </div>
 
-  <!-- STEP 2d: 휴대폰결제 -->
+  <!-- STEP 2d: 휴대폰결제 (본인인증 → 결제) -->
   <div class="step" id="step-phone">
     <button class="back" onclick="go('step-method')">‹ 다른 수단으로 결제</button>
-    <h2>휴대폰으로 결제할게요</h2>
+    <h2>휴대폰 본인인증</h2>
     <div class="card">
-      <p class="note" style="margin-top:0">본인인증(통신사 SMS)을 거쳐 승인하고, 다음 달 통신요금에 합산됩니다.<br>소액결제라 월 한도가 있어요.</p>
-      <button class="btn" onclick="payPhone()">본인인증하고 결제</button>
+      <p class="note" style="margin-top:0">통신사 본인인증을 거쳐야 결제할 수 있어요. 요금은 다음 달 통신요금에 합산됩니다.</p>
+      <div class="row2 field">
+        <div><label>통신사</label>
+          <select id="phCarrier">
+            <option value="SKT">SKT</option><option value="KT">KT</option>
+            <option value="LGU">LG U+</option><option value="MVNO">알뜰폰</option>
+          </select></div>
+        <div><label>휴대폰번호</label><input id="phNo" placeholder="01012345678" maxlength="13" inputmode="numeric"></div>
+      </div>
+      <button class="btn" id="phBtnReq" onclick="phoneAuthRequest()">인증번호 받기</button>
+
+      <div id="phVerifyBox" style="display:none; margin-top:14px">
+        <div class="blnc" id="phDemoHint" style="display:none"></div>
+        <div class="field"><label>인증번호 6자리</label>
+          <input id="phCode" placeholder="000000" maxlength="6" inputmode="numeric"></div>
+        <button class="btn" onclick="phonePay()">인증하고 결제</button>
+      </div>
     </div>
   </div>
 
@@ -401,13 +416,53 @@ function payVacnt() {
     .then(r => r.json()).then(showResult);
 }
 
-function payPhone() {
+let phAuthReqKey = null;
+
+document.getElementById('phNo').addEventListener('input', e => {
+  const d = e.target.value.replace(/\D/g, '').slice(0, 11);
+  e.target.value = d.length > 7 ? d.replace(/(\d{3})(\d{4})(\d+)/, '$1-$2-$3')
+    : d.length > 3 ? d.replace(/(\d{3})(\d+)/, '$1-$2') : d;
+});
+
+function phoneAuthRequest() {
   const o = orderInfo();
-  busy(true, '본인인증 후 승인하고 있어요…');
-  fetch('/api/pay/phone/pay', {
+  fetch('/api/pay/phone/auth/request', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ mchtId: o.mchtId, amt: o.amt, goodsNm: o.goodsNm, reqId: o.reqId })
-  }).then(r => r.json()).then(showResult);
+    body: JSON.stringify({
+      phoneNo: document.getElementById('phNo').value.replace(/\D/g, ''),
+      carrier: document.getElementById('phCarrier').value, amt: o.amt
+    })
+  }).then(r => r.json()).then(res => {
+    if (res.rsltCd !== '0000') { alert(res.rsltMsg); return; }
+    phAuthReqKey = res.authReqKey;
+    document.getElementById('phVerifyBox').style.display = 'block';
+    document.getElementById('phBtnReq').textContent = '인증번호 다시 받기';
+    if (res.demoAuthCode) {
+      const h = document.getElementById('phDemoHint');
+      h.style.display = 'block';
+      h.innerHTML = '데모 인증번호 <b>' + res.demoAuthCode + '</b> (실서비스에서는 SMS로 발송돼요)';
+    }
+  });
+}
+
+function phonePay() {
+  const o = orderInfo();
+  if (!phAuthReqKey) { alert('먼저 인증번호를 받아주세요'); return; }
+  // 1) 본인인증 확인 → authTid 발급, 2) authTid로만 결제 승인
+  fetch('/api/pay/phone/auth/confirm', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ authReqKey: phAuthReqKey, authCode: document.getElementById('phCode').value, amt: o.amt })
+  }).then(r => r.json()).then(cf => {
+    if (cf.rsltCd !== '0000') { alert(cf.rsltMsg); return; }
+    busy(true, '본인인증 완료 · 승인하고 있어요…');
+    return fetch('/api/pay/phone/pay', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mchtId: o.mchtId, amt: o.amt, goodsNm: o.goodsNm, reqId: o.reqId,
+        authReqKey: phAuthReqKey, authTid: cf.authTid
+      })
+    }).then(r => r.json()).then(showResult);
+  });
 }
 
 function payPp() {

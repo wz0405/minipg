@@ -6,6 +6,7 @@ import com.minipg.api.flow.PayContext;
 import com.minipg.api.flow.PayReqSupport;
 import com.minipg.api.partner.PartnerResult;
 import com.minipg.api.service.AfterProcessor;
+import com.minipg.api.service.PhoneAuthService;
 import com.minipg.common.domain.PayReq;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -28,11 +29,18 @@ public class PhoneConfirm extends AbstractPayProcess {
     @Autowired
     private AfterProcessor afterProcessor;
 
+    @Autowired
+    private PhoneAuthService phoneAuthService;
+
     @Override
     protected void beforeProcess(PayContext ctx) {
+        // 본인인증을 통과해 발급된 거래번호가 아니면 결제 자체를 거부한다.
+        if (!phoneAuthService.isVerified(ctx.in("authReqKey"), ctx.in("authTid"), ctx.amt())) {
+            throw new FlowStop("1507", "본인인증이 완료되지 않았습니다");
+        }
         PayReq req = payReqSupport.validateForPay(ctx.in("reqId"), ctx.amt());
         ctx.work("payReq", req);
-        ctx.work("authTid", ctx.in("authTid"));   // 본인인증창이 발급한 거래번호
+        ctx.work("authTid", ctx.in("authTid"));   // 본인인증에서 발급된 거래번호
     }
 
     @Override
@@ -66,6 +74,7 @@ public class PhoneConfirm extends AbstractPayProcess {
 
     @Override
     protected void postCommit(PayContext ctx) {
+        phoneAuthService.consume(ctx.in("authReqKey"));   // 인증 재사용 방지
         afterProcessor.notifyApproved(ctx.in("reqId"), ctx.workStr("tid"), ctx.amt());
         ctx.ok(Map.of("tid", ctx.workStr("tid"), "amt", ctx.amt(), "payMethod", "PHONE"));
     }

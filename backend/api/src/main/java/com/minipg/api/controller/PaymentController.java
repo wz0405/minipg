@@ -41,6 +41,7 @@ public class PaymentController {
     private final NicepayClient nicepayClient;
     private final KakaopayClient kakaopayClient;
     private final com.minipg.api.pg.DanalpayClient danalpayClient;
+    private final com.minipg.api.service.PhoneAuthService phoneAuthService;
     private final PayReqMapper payReqMapper;
     private final VacntMapper vacntMapper;
 
@@ -51,9 +52,27 @@ public class PaymentController {
                 "kakaoDirect", kakaopayClient.enabled(), "phoneStub", danalpayClient.stubMode());
     }
 
+    /** 휴대폰 본인인증 요청 — 번호·통신사로 승인번호를 발송한다 (데모는 화면 표시). */
+    @PostMapping("/phone/auth/request")
+    public Map<String, Object> phoneAuthRequest(@RequestBody Map<String, Object> body) {
+        return phoneAuthService.request(
+                String.valueOf(body.get("phoneNo")),
+                String.valueOf(body.get("carrier")),
+                Long.parseLong(String.valueOf(body.get("amt"))));
+    }
+
+    /** 휴대폰 본인인증 확인 — 승인번호가 맞으면 거래번호(authTid)를 발급한다. */
+    @PostMapping("/phone/auth/confirm")
+    public Map<String, Object> phoneAuthConfirm(@RequestBody Map<String, Object> body) {
+        return phoneAuthService.confirm(
+                String.valueOf(body.get("authReqKey")),
+                String.valueOf(body.get("authCode")),
+                Long.parseLong(String.valueOf(body.get("amt"))));
+    }
+
     /**
-     * 휴대폰결제 — 스텁 모드에서 본인인증을 흉내 낸 즉시 승인 (실모드는 다날 본인인증창 경유).
-     * 본인인증창이 발급하는 거래번호를 서버가 confirm하는 2단계 흐름을 데모로 압축한다.
+     * 휴대폰결제 승인 — 본인인증(위 두 단계)을 통과해 발급된 authTid로만 결제가 성립한다.
+     * 인증 없이 호출하면 프로세스가 거부한다(1507). 실모드는 다날 본인인증창이 authTid를 발급한다.
      */
     @PostMapping("/phone/pay")
     public Map<String, Object> phonePay(@RequestBody Map<String, Object> body) {
@@ -64,7 +83,8 @@ public class PaymentController {
         msg.put("goodsNm", body.getOrDefault("goodsNm", "휴대폰결제"));
         msg.put("reqId", body.get("reqId"));
         msg.put("orderId", newOrderId());
-        msg.put("authTid", danalpayClient.stubTid());   // 실모드에선 본인인증창이 발급한 값
+        msg.put("authReqKey", body.get("authReqKey"));
+        msg.put("authTid", body.get("authTid"));
         return payGateClient.call(msg);
     }
 
