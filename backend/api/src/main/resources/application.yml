@@ -34,3 +34,7 @@ nicepay:
 kakaopay:
   admin-key: ${KAKAOPAY_ADMIN_KEY:}
   cid: ${KAKAOPAY_CID:TC0ONETIME}
+
+danalpay:
+  cpid: ${DANALPAY_CPID:A010002002}
+  secret-key: ${DANALPAY_SECRET_KEY:}

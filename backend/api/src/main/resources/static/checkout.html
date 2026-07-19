@@ -145,6 +145,21 @@
         <div><div class="tit">머니·포인트</div><div class="desc">충전해 둔 잔액으로 결제해요</div></div>
         <div class="chev">›</div>
       </button>
+      <button class="method" onclick="go('step-phone')">
+        <div class="ico">📱</div>
+        <div><div class="tit">휴대폰 결제</div><div class="desc">본인인증 후 통신사 요금에 합산해요 (다날)</div></div>
+        <div class="chev">›</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 2d: 휴대폰결제 -->
+  <div class="step" id="step-phone">
+    <button class="back" onclick="go('step-method')">‹ 다른 수단으로 결제</button>
+    <h2>휴대폰으로 결제할게요</h2>
+    <div class="card">
+      <p class="note" style="margin-top:0">본인인증(통신사 SMS)을 거쳐 승인하고, 다음 달 통신요금에 합산됩니다.<br>소액결제라 월 한도가 있어요.</p>
+      <button class="btn" onclick="payPhone()">본인인증하고 결제</button>
     </div>
   </div>
 
@@ -384,6 +399,15 @@ function payVacnt() {
   fetch('/api/pay/vacnt/issue', { method: 'POST',
     headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(o) })
     .then(r => r.json()).then(showResult);
+}
+
+function payPhone() {
+  const o = orderInfo();
+  busy(true, '본인인증 후 승인하고 있어요…');
+  fetch('/api/pay/phone/pay', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mchtId: o.mchtId, amt: o.amt, goodsNm: o.goodsNm, reqId: o.reqId })
+  }).then(r => r.json()).then(showResult);
 }
 
 function payPp() {

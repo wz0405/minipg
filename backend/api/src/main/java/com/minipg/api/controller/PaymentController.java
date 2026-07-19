@@ -40,14 +40,32 @@ public class PaymentController {
     private final PayGateClient payGateClient;
     private final NicepayClient nicepayClient;
     private final KakaopayClient kakaopayClient;
+    private final com.minipg.api.pg.DanalpayClient danalpayClient;
     private final PayReqMapper payReqMapper;
     private final VacntMapper vacntMapper;
 
-    /** 결제 페이지 초기화 — 경로별 스텁 여부 + 카카오 직연동 가능 여부. */
+    /** 결제 페이지 초기화 — 경로별 스텁 여부 + 직연동 가능 여부. */
     @GetMapping("/config")
     public Map<String, Object> config() {
         return Map.of("authStub", nicepayClient.authStub(), "keyinStub", nicepayClient.keyinStub(),
-                "kakaoDirect", kakaopayClient.enabled());
+                "kakaoDirect", kakaopayClient.enabled(), "phoneStub", danalpayClient.stubMode());
+    }
+
+    /**
+     * 휴대폰결제 — 스텁 모드에서 본인인증을 흉내 낸 즉시 승인 (실모드는 다날 본인인증창 경유).
+     * 본인인증창이 발급하는 거래번호를 서버가 confirm하는 2단계 흐름을 데모로 압축한다.
+     */
+    @PostMapping("/phone/pay")
+    public Map<String, Object> phonePay(@RequestBody Map<String, Object> body) {
+        Map<String, Object> msg = new HashMap<>();
+        msg.put("cmd", "PHONE_CONFIRM");
+        msg.put("mchtId", body.getOrDefault("mchtId", DEMO_MCHT_ID));
+        msg.put("amt", body.get("amt"));
+        msg.put("goodsNm", body.getOrDefault("goodsNm", "휴대폰결제"));
+        msg.put("reqId", body.get("reqId"));
+        msg.put("orderId", newOrderId());
+        msg.put("authTid", danalpayClient.stubTid());   // 실모드에선 본인인증창이 발급한 값
+        return payGateClient.call(msg);
     }
 
     /**

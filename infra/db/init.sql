@@ -229,7 +229,10 @@ INSERT INTO SI_PTN_FEE (MCHT_ID, PAY_METHOD, APPLY_DT, FEE_RATE) VALUES
     ('demobooks03', 'MONEY', '2026-01-01', 0.0000),
     ('demostore01', 'POINT', '2026-01-01', 0.0000),
     ('democafe02',  'POINT', '2026-01-01', 0.0000),
-    ('demobooks03', 'POINT', '2026-01-01', 0.0000);
+    ('demobooks03', 'POINT', '2026-01-01', 0.0000),
+    ('demostore01', 'PHONE', '2026-01-01', 5.0000),
+    ('democafe02',  'PHONE', '2026-01-01', 5.0000),
+    ('demobooks03', 'PHONE', '2026-01-01', 5.0000);
 
 INSERT INTO SI_STMT_FEE (MCHT_ID, PAY_METHOD, APPLY_DT, FEE_RATE) VALUES
     ('demostore01', 'CARD',  '2026-01-01', 2.9000),
@@ -243,7 +246,10 @@ INSERT INTO SI_STMT_FEE (MCHT_ID, PAY_METHOD, APPLY_DT, FEE_RATE) VALUES
     ('demobooks03', 'MONEY', '2026-01-01', 1.5000),
     ('demostore01', 'POINT', '2026-01-01', 1.5000),
     ('democafe02',  'POINT', '2026-01-01', 1.5000),
-    ('demobooks03', 'POINT', '2026-01-01', 1.5000);
+    ('demobooks03', 'POINT', '2026-01-01', 1.5000),
+    ('demostore01', 'PHONE', '2026-01-01', 5.5000),
+    ('democafe02',  'PHONE', '2026-01-01', 5.5000),
+    ('demobooks03', 'PHONE', '2026-01-01', 5.5000);
 
 INSERT INTO SI_VACNT_POOL (BANK_CD, BANK_NM, VACNT_NO) VALUES
     ('020', '우리은행', '5610001000101'), ('020', '우리은행', '5610001000102'),
