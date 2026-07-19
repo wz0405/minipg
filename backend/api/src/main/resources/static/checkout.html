@@ -176,17 +176,14 @@
     </div>
   </div>
 
-  <!-- STEP 2c: 머니/포인트 -->
+  <!-- STEP 2c: 머니/포인트 (소진순서 통합결제) -->
   <div class="step" id="step-pp">
     <button class="back" onclick="go('step-method')">‹ 다른 수단으로 결제</button>
-    <h2>어떤 잔액으로 결제할까요?</h2>
+    <h2>잔액으로 결제할게요</h2>
     <div class="card">
-      <div class="row2 field">
-        <div><label>회원</label><select id="ppUser"></select></div>
-        <div><label>매체</label><select id="ppType">
-          <option value="MONEY">머니</option><option value="POINT">포인트</option></select></div>
-      </div>
+      <div class="field"><label>회원</label><select id="ppUser"></select></div>
       <div class="blnc" id="ppBlnc">잔액을 불러오는 중…</div>
+      <p class="note" style="margin-top:0">머니를 먼저 쓰고 부족하면 포인트로 이어서 차감해요 (소진순서 결제).</p>
       <button class="btn" onclick="payPp()">결제하기</button>
     </div>
   </div>
@@ -274,13 +271,14 @@ fetch('/api/pay/pp/users').then(r => r.json()).then(rows => {
   updatePpBlnc();
 });
 document.getElementById('ppUser').addEventListener('change', updatePpBlnc);
-document.getElementById('ppType').addEventListener('change', updatePpBlnc);
 function updatePpBlnc() {
-  const u = document.getElementById('ppUser').value, t = document.getElementById('ppType').value;
-  const row = ppUsers.find(r => r.USR_ID === u && r.PP_TYPE === t);
-  document.getElementById('ppBlnc').innerHTML = row
-    ? '사용 가능한 잔액 <b>' + Number(row.BLNC).toLocaleString() + '원</b>'
-    : '잔액 정보 없음';
+  const u = document.getElementById('ppUser').value;
+  const money = ppUsers.find(r => r.USR_ID === u && r.PP_TYPE === 'MONEY');
+  const point = ppUsers.find(r => r.USR_ID === u && r.PP_TYPE === 'POINT');
+  const m = money ? Number(money.BLNC) : 0, p = point ? Number(point.BLNC) : 0;
+  document.getElementById('ppBlnc').innerHTML =
+    '머니 <b>' + m.toLocaleString() + '원</b> · 포인트 <b>' + p.toLocaleString() + '원</b>'
+    + ' <span style="color:var(--mute)">(합계 ' + (m + p).toLocaleString() + '원)</span>';
 }
 
 /* 카드번호/유효기간 입력 포매팅 */
@@ -395,7 +393,6 @@ function payPp() {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       usrId: document.getElementById('ppUser').value,
-      ppType: document.getElementById('ppType').value,
       mchtId: o.mchtId, amt: o.amt, goodsNm: o.goodsNm
     })
   }).then(r => r.json()).then(showResult);

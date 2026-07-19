@@ -21,6 +21,9 @@ public interface TrMstrMapper {
 
     int countCancel(@Param("tid") String tid);
 
+    /** 같은 원거래 그룹(OTID)의 승인행 — 복합결제(매체별 sub-거래)의 일괄 취소에 쓴다. */
+    List<TrMstr> selectApprovalsByOtid(@Param("otid") String otid);
+
     /** 당일 LIVE 승인 중 취소행이 아직 없는 건 — PG 자동취소 동기화 대상. */
     List<TrMstr> selectLiveUncancelled(@Param("trDt") LocalDate trDt);
 

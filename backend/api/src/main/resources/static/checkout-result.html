@@ -65,7 +65,7 @@
 </div>
 <script>
 const p = new URLSearchParams(location.search);
-const PM_NM = { CARD: '카드', VACNT: '가상계좌', MONEY: '머니', POINT: '포인트' };
+const PM_NM = { CARD: '카드', VACNT: '가상계좌', MONEY: '머니', POINT: '포인트', PREPAID: '머니·포인트' };
 const ok = p.get('rsltCd') === '0000';
 const vacnt = p.get('payMethod') === 'VACNT';
 const mark = document.getElementById('mark');

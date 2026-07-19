@@ -45,6 +45,14 @@
            AND TX_STATUS = 'APPROVED'
     </select>
 
+    <select id="selectApprovalsByOtid" resultType="com.minipg.common.domain.TrMstr">
+        SELECT *
+          FROM TR_MSTR
+         WHERE ORG_TID = #{otid}
+           AND TX_STATUS = 'APPROVED'
+         ORDER BY TR_SEQ
+    </select>
+
     <select id="countCancel" resultType="int">
         SELECT COUNT(*)
           FROM TR_MSTR
