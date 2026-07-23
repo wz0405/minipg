@@ -31,6 +31,11 @@ public class BillingApproval extends AbstractPayProcess {
         ctx.work("payType", "BILLING");
         ctx.work("moid", "BILL" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMddHHmmss"))
                 + ThreadLocalRandom.current().nextInt(1000, 9999));
+        // 빌링은 PAY_REQ 사전등록이 없는 서버(배치) 트리거 방식이라 금액이 매 회차 전문으로 온다 —
+        // NicepayAdapter가 신뢰하는 work 계약은 동일하게 맞춰준다.
+        ctx.work("amt", ctx.amt());
+        ctx.work("goodsNm", ctx.in("goodsNm"));
+        ctx.work("orderId", ctx.workStr("moid"));
     }
 
     @Override
@@ -46,8 +51,8 @@ public class BillingApproval extends AbstractPayProcess {
     @Override
     protected void afterProcess(PayContext ctx) {
         trMstrMapper.insert(approvalRow(
-                ctx.workStr("tid"), ctx.workStr("mchtId"), "CARD", ctx.amt(),
-                "BILLING", "NICEPAY", ctx.workStr("moid"), ctx.in("goodsNm"),
+                ctx.workStr("tid"), ctx.workStr("mchtId"), "CARD", ctx.workAmt("amt"),
+                "BILLING", "NICEPAY", ctx.workStr("moid"), ctx.workStr("goodsNm"),
                 ctx.workStr("maskedCard"), null));
     }
 
@@ -61,7 +66,7 @@ public class BillingApproval extends AbstractPayProcess {
 
     @Override
     protected void postCommit(PayContext ctx) {
-        ctx.ok(Map.of("tid", ctx.workStr("tid"), "amt", ctx.amt(),
+        ctx.ok(Map.of("tid", ctx.workStr("tid"), "amt", ctx.workAmt("amt"),
                 "payMethod", "CARD", "moid", ctx.workStr("moid")));
     }
 }

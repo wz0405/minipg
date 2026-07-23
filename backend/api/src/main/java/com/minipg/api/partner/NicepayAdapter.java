@@ -19,16 +19,17 @@ public class NicepayAdapter implements PartnerAdapter {
 
     @Override
     public PartnerResult approve(PayContext ctx) {
+        // 금액/주문번호/상품명은 전문이 아니라 각 프로세스가 work에 심어둔 값(DB 단일 소스)을 쓴다.
         String payType = ctx.workStr("payType");
         NicepayResult r = switch (payType) {
             case "AUTH" -> nicepayClient.approveAuth(
-                    ctx.in("authToken"), ctx.in("tid"), ctx.in("nextAppUrl"), ctx.amt());
+                    ctx.in("authToken"), ctx.in("tid"), ctx.in("nextAppUrl"), ctx.workAmt("amt"));
             case "KEYIN" -> nicepayClient.keyin(
-                    ctx.in("orderId"), ctx.amt(), ctx.in("goodsNm"),
+                    ctx.workStr("orderId"), ctx.workAmt("amt"), ctx.workStr("goodsNm"),
                     ctx.in("cardNo"), ctx.in("expYear"), ctx.in("expMonth"),
                     ctx.in("idNo"), ctx.in("cardPw"));
             case "BILLING" -> nicepayClient.billingApprove(
-                    ctx.in("bid"), ctx.workStr("moid"), ctx.amt(), ctx.in("goodsNm"));
+                    ctx.in("bid"), ctx.workStr("moid"), ctx.workAmt("amt"), ctx.workStr("goodsNm"));
             default -> throw new IllegalStateException("지원하지 않는 결제유형: " + payType);
         };
         if (!r.success("3001")) {
@@ -51,7 +52,7 @@ public class NicepayAdapter implements PartnerAdapter {
     public PartnerResult netCancel(PayContext ctx) {
         boolean useAuthMid = "AUTH".equals(ctx.workStr("payType"));
         NicepayResult r = nicepayClient.cancel(
-                ctx.workStr("tid"), ctx.in("orderId"), ctx.amt(), "NET CANCEL", useAuthMid);
+                ctx.workStr("tid"), ctx.workStr("orderId"), ctx.workAmt("amt"), "NET CANCEL", useAuthMid);
         return r.success("2001")
                 ? PartnerResult.ok(ctx.workStr("tid"), null)
                 : PartnerResult.fail(r.resultCode(), r.resultMsg());

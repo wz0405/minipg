@@ -260,16 +260,21 @@ public class PaymentController {
             res = Map.of("rsltCd", form.getOrDefault("AuthResultCode", "9996"),
                     "rsltMsg", form.getOrDefault("AuthResultMsg", "인증 실패"));
         } else {
+            String reqId = form.get("reqId");
             Map<String, Object> msg = new HashMap<>();
             msg.put("cmd", "APPROVE");
             msg.put("authToken", form.get("AuthToken"));
             msg.put("tid", form.get("TxTid"));
             msg.put("nextAppUrl", form.get("NextAppURL"));
-            msg.put("amt", form.getOrDefault("Amt", form.get("amt")));
-            msg.put("orderId", form.get("Moid"));
-            msg.put("mchtId", form.getOrDefault("mchtId", DEMO_MCHT_ID));
-            msg.put("goodsNm", form.get("GoodsName"));
-            msg.put("reqId", form.get("reqId"));
+            msg.put("reqId", reqId);
+            if (reqId == null || reqId.isBlank()) {
+                // 사전등록(hosted 주문) 없는 즉석결제 — 조회할 PAY_REQ가 없어 나이스페이 콜백 값을 그대로 쓴다.
+                msg.put("amt", form.getOrDefault("Amt", form.get("amt")));
+                msg.put("orderId", form.get("Moid"));
+                msg.put("mchtId", form.getOrDefault("mchtId", DEMO_MCHT_ID));
+                msg.put("goodsNm", form.get("GoodsName"));
+            }
+            // reqId가 있으면 금액·가맹점·상품명은 전문에 싣지 않는다 — bld가 PAY_REQ를 직접 조회해 확정한다.
             res = payGateClient.call(msg);
         }
         String location = UriComponentsBuilder.fromPath("/checkout-result.html")

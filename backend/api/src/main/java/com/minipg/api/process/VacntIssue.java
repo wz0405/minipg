@@ -28,8 +28,11 @@ public class VacntIssue extends AbstractPayProcess {
 
     @Override
     protected void beforeProcess(PayContext ctx) {
+        // reqId가 있으면 금액·가맹점은 전문이 아니라 DB(PAY_REQ)를 단일 소스로 쓴다.
         PayReq req = payReqSupport.validateForPay(ctx.in("reqId"), ctx.amt());
         ctx.work("payReq", req);
+        ctx.work("mchtId", payReqSupport.resolveMcht(req, ctx.in("mchtId")));
+        ctx.work("amt", req != null ? req.getAmt() : ctx.amt());
         ctx.work("tid", "VA" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMddHHmmss"))
                 + ThreadLocalRandom.current().nextInt(1000, 9999));
     }
@@ -43,10 +46,9 @@ public class VacntIssue extends AbstractPayProcess {
         long poolSeq = ((Number) pool.get("POOL_SEQ")).longValue();
         vacntMapper.assignPool(poolSeq);
 
-        PayReq req = ctx.work("payReq");
         String expDt = LocalDateTime.now().plusDays(3).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         vacntMapper.insert(ctx.workStr("tid"), poolSeq, ctx.in("reqId"),
-                payReqSupport.resolveMcht(req, ctx.in("mchtId")), ctx.amt(),
+                ctx.workStr("mchtId"), ctx.workAmt("amt"),
                 (String) pool.get("BANK_CD"), (String) pool.get("BANK_NM"),
                 (String) pool.get("VACNT_NO"), expDt);
         ctx.work("bankNm", pool.get("BANK_NM"));
@@ -56,7 +58,7 @@ public class VacntIssue extends AbstractPayProcess {
 
     @Override
     protected void postCommit(PayContext ctx) {
-        ctx.ok(Map.of("tid", ctx.workStr("tid"), "amt", ctx.amt(), "payMethod", "VACNT",
+        ctx.ok(Map.of("tid", ctx.workStr("tid"), "amt", ctx.workAmt("amt"), "payMethod", "VACNT",
                 "bankNm", ctx.workStr("bankNm"), "vacntNo", ctx.workStr("vacntNo"),
                 "expDt", ctx.workStr("expDt")));
     }
