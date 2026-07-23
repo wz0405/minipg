@@ -82,9 +82,11 @@ public class PhoneAuthService {
                 && s.authTid().equals(authTid) && s.amount() == amount;
     }
 
-    /** 결제 완료·실패 후 세션 소진 — 재사용 방지. */
+    /** 결제 완료·실패 후 세션 소진 — 재사용 방지. 다날 실제 결제창 경로는 세션이 없어 authReqKey가 null이다. */
     public void consume(String authReqKey) {
-        sessions.remove(authReqKey);
+        if (authReqKey != null) {
+            sessions.remove(authReqKey);
+        }
     }
 
     private String mask(String phoneNo) {

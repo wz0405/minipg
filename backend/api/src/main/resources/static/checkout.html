@@ -167,13 +167,18 @@
           </select></div>
         <div><label>휴대폰번호</label><input id="phNo" placeholder="01012345678" maxlength="13" inputmode="numeric"></div>
       </div>
-      <button class="btn" id="phBtnReq" onclick="phoneAuthRequest()">인증번호 받기</button>
+      <button class="btn" id="phBtnReq" onclick="phoneAuthRequest()">인증번호 받기 (데모 시뮬레이션)</button>
 
       <div id="phVerifyBox" style="display:none; margin-top:14px">
         <div class="blnc" id="phDemoHint" style="display:none"></div>
         <div class="field"><label>인증번호 6자리</label>
           <input id="phCode" placeholder="000000" maxlength="6" inputmode="numeric"></div>
         <button class="btn" onclick="phonePay()">인증하고 결제</button>
+      </div>
+
+      <div id="phDanalBox" style="display:none; margin-top:14px; border-top:1px solid var(--line); padding-top:14px">
+        <p class="note" style="margin-top:0">다날 개발자센터 공개 샌드박스 키로 실제 다날 결제창(SMS/PASS 인증)을 띄워요. 계약 전이라 최종 승인만 스텁이에요.</p>
+        <button class="btn" style="background:#111" onclick="phoneDanalPay()">다날 실제 결제창으로 인증하기</button>
       </div>
     </div>
   </div>
@@ -246,6 +251,7 @@
   <input type="hidden" name="EasyPayMethod">
 </form>
 
+<script src="https://static.danalpay.com/d1/sdk/index.js"></script>
 <script>
 const MCHT_NM = { demostore01: '데모 스토어', democafe02: '데모 카페', demobooks03: '데모 서점' };
 let cfg = { authStub: true, keyinStub: true };
@@ -275,6 +281,9 @@ fetch('/api/pay/config').then(r => r.json()).then(c => {
     const b = document.getElementById('stub-badge');
     b.style.display = 'block';
     b.textContent = 'PG 키 미설정 — 일부 수단은 스텁 승인으로 동작해요';
+  }
+  if (c.danalClientKey) {
+    document.getElementById('phDanalBox').style.display = 'block';
   }
 });
 
@@ -462,6 +471,32 @@ function phonePay() {
         authReqKey: phAuthReqKey, authTid: cf.authTid
       })
     }).then(r => r.json()).then(showResult);
+  });
+}
+
+/** 다날 실제 결제창(SDK 팝업) 호출 — 본인인증(SMS/PASS/삼성페이 등)은 다날이 직접 처리한다. */
+async function phoneDanalPay() {
+  const o = orderInfo();
+  if (!(o.amt > 0)) { alert('결제 금액을 입력해 주세요'); return; }
+  if (typeof DanalPayments === 'undefined') { alert('다날 SDK를 불러오지 못했어요'); return; }
+  busy(true, '다날 결제창을 여는 중…');
+  const start = await fetch('/api/pay/phone/danal/start', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(o)
+  }).then(r => r.json());
+  busy(false);
+  const danalPayments = DanalPayments(start.clientKey);
+  danalPayments.requestPayment({
+    paymentsMethod: 'MOBILE',
+    merchantId: start.merchantId,
+    orderId: start.reqId,
+    orderName: o.goodsNm,
+    amount: o.amt,
+    itemCode: '1270000000',
+    userId: 'demo@minipg.local',
+    userEmail: 'demo@minipg.local',
+    userName: '테스트유저',
+    successUrl: location.origin + '/api/pay/phone/danal/callback',
+    failUrl: location.origin + '/api/pay/phone/danal/callback',
   });
 }
 

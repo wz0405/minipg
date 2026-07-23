@@ -21,7 +21,8 @@ public class DanalAdapter implements PartnerAdapter {
 
     @Override
     public PartnerResult approve(PayContext ctx) {
-        DanalResult r = danalpayClient.confirm(ctx.workStr("authTid"), ctx.amt(), ctx.in("orderId"));
+        // 금액·주문번호는 전문이 아니라 PhoneConfirm이 PAY_REQ 조회로 work에 심어둔 값을 쓴다.
+        DanalResult r = danalpayClient.confirm(ctx.workStr("authTid"), ctx.workAmt("amt"), ctx.workStr("orderId"));
         return r.success()
                 ? PartnerResult.ok(r.tid(), null)
                 : PartnerResult.fail(r.code(), r.msg());
@@ -37,7 +38,7 @@ public class DanalAdapter implements PartnerAdapter {
 
     @Override
     public PartnerResult netCancel(PayContext ctx) {
-        DanalResult r = danalpayClient.cancel(ctx.workStr("tid"), ctx.amt());
+        DanalResult r = danalpayClient.cancel(ctx.workStr("tid"), ctx.workAmt("amt"));
         return r.success()
                 ? PartnerResult.ok(ctx.workStr("tid"), null)
                 : PartnerResult.fail(r.code(), r.msg());

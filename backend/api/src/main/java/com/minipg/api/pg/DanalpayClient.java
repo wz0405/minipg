@@ -51,6 +51,11 @@ public class DanalpayClient {
         return props.getCpid();
     }
 
+    /** 클라이언트 SDK 초기화 키 — 브라우저에 노출돼도 되는 공개 키(Secret Key와는 별개). */
+    public String clientKey() {
+        return props.getClientKey();
+    }
+
     /** 승인 확정 — 본인인증에서 받은 거래번호로 결제를 확정한다. */
     public DanalResult confirm(String transactionId, long amount, String orderId) {
         if (stubMode()) {

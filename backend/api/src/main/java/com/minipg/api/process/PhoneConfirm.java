@@ -34,13 +34,34 @@ public class PhoneConfirm extends AbstractPayProcess {
 
     @Override
     protected void beforeProcess(PayContext ctx) {
-        // 본인인증을 통과해 발급된 거래번호가 아니면 결제 자체를 거부한다.
-        if (!phoneAuthService.isVerified(ctx.in("authReqKey"), ctx.in("authTid"), ctx.amt())) {
-            throw new FlowStop("1507", "본인인증이 완료되지 않았습니다");
+        String authReqKey = ctx.in("authReqKey");
+        String authTid = ctx.in("authTid");
+        PayReq req;
+
+        if (authReqKey != null && !authReqKey.isBlank()) {
+            // 자체 시뮬레이션 경로(PhoneAuthService) — 발급 세션과 authTid가 일치해야 한다.
+            // reqId 없는 즉석결제도 허용해야 해서 기존처럼 전문의 amt와 대조한다.
+            if (!phoneAuthService.isVerified(authReqKey, authTid, ctx.amt())) {
+                throw new FlowStop("1507", "본인인증이 완료되지 않았습니다");
+            }
+            req = payReqSupport.validateForPay(ctx.in("reqId"), ctx.amt());
+        } else {
+            // 다날 실제 결제창 경로 — front는 reqId(PAY_REQ pk)와 authTid(다날 콜백 transactionId)만
+            // 전문에 싣는다. 금액·가맹점·상품명은 인증요청 단계(danal/start)에서 미리 심어둔 PAY_REQ를
+            // bld가 직접 조회해 확정한다 — front→bld 경계엔 결제를 특정할 값만, 실 데이터는 DB가 단일
+            // 소스라는 ssolpay와 동일한 경계 설계다.
+            if (authTid == null || authTid.isBlank()) {
+                throw new FlowStop("1507", "본인인증이 완료되지 않았습니다");
+            }
+            req = payReqSupport.requireForPay(ctx.in("reqId"));
         }
-        PayReq req = payReqSupport.validateForPay(ctx.in("reqId"), ctx.amt());
+
         ctx.work("payReq", req);
-        ctx.work("authTid", ctx.in("authTid"));   // 본인인증에서 발급된 거래번호
+        ctx.work("authTid", authTid);
+        ctx.work("mchtId", payReqSupport.resolveMcht(req, ctx.in("mchtId")));
+        ctx.work("amt", req != null ? req.getAmt() : ctx.amt());
+        ctx.work("goodsNm", req != null ? req.getGoodsNm() : ctx.in("goodsNm"));
+        ctx.work("orderId", req != null ? req.getReqId() : ctx.in("orderId"));
     }
 
     @Override
@@ -55,12 +76,10 @@ public class PhoneConfirm extends AbstractPayProcess {
 
     @Override
     protected void afterProcess(PayContext ctx) {
-        PayReq req = ctx.work("payReq");
         trMstrMapper.insert(approvalRow(
-                ctx.workStr("tid"),
-                payReqSupport.resolveMcht(req, ctx.in("mchtId")),
-                "PHONE", ctx.amt(), "MOBILE", "DANAL",
-                ctx.in("orderId"), ctx.in("goodsNm"), null, null));
+                ctx.workStr("tid"), ctx.workStr("mchtId"),
+                "PHONE", ctx.workAmt("amt"), "MOBILE", "DANAL",
+                ctx.workStr("orderId"), ctx.workStr("goodsNm"), null, null));
         payReqSupport.mark(ctx.in("reqId"), PayReq.ST_APPROVED, ctx.workStr("tid"));
     }
 
@@ -75,7 +94,7 @@ public class PhoneConfirm extends AbstractPayProcess {
     @Override
     protected void postCommit(PayContext ctx) {
         phoneAuthService.consume(ctx.in("authReqKey"));   // 인증 재사용 방지
-        afterProcessor.notifyApproved(ctx.in("reqId"), ctx.workStr("tid"), ctx.amt());
-        ctx.ok(Map.of("tid", ctx.workStr("tid"), "amt", ctx.amt(), "payMethod", "PHONE"));
+        afterProcessor.notifyApproved(ctx.in("reqId"), ctx.workStr("tid"), ctx.workAmt("amt"));
+        ctx.ok(Map.of("tid", ctx.workStr("tid"), "amt", ctx.workAmt("amt"), "payMethod", "PHONE"));
     }
 }

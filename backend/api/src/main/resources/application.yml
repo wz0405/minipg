@@ -36,5 +36,6 @@ kakaopay:
   cid: ${KAKAOPAY_CID:TC0ONETIME}
 
 danalpay:
-  cpid: ${DANALPAY_CPID:A010002002}
+  cpid: ${DANALPAY_CPID:A010084434}
+  client-key: ${DANALPAY_CLIENT_KEY:CL_TEST_I4d8FWYSSKl-42F7y3o9g_7iexSCyHbL8qthpZxPnpY=}
   secret-key: ${DANALPAY_SECRET_KEY:}

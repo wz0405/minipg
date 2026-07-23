@@ -57,6 +57,8 @@
     <div class="row"><span class="k">거래번호</span><span class="v" id="tid"></span></div>
     <div class="row"><span class="k">결제수단</span><span class="v" id="payMethod"></span></div>
     <div class="row"><span class="k">결과코드</span><span class="v" id="rsltCd"></span></div>
+    <div class="row" id="danalRow" style="display:none">
+      <span class="k">다날 transactionId</span><span class="v" id="danalTid"></span></div>
   </div>
 
   <button class="btn" id="btnDeposit" style="display:none" onclick="mockDeposit()">입금 완료하기 (입금통보 시뮬레이션)</button>
@@ -93,6 +95,11 @@ document.getElementById('tid').textContent = p.get('tid') || '-';
 document.getElementById('payMethod').textContent = PM_NM[p.get('payMethod')] || p.get('payMethod') || '-';
 document.getElementById('rsltCd').textContent = p.get('rsltCd') || '-';
 if (ok && !vacnt && p.get('tid')) document.getElementById('btnCancel').style.display = 'block';
+if (p.get('danalTid')) {
+  document.getElementById('danalRow').style.display = 'flex';
+  document.getElementById('danalTid').textContent = p.get('danalTid')
+    + (p.get('carrier') ? ' (' + p.get('carrier') + ')' : '');
+}
 
 function mockDeposit() {
   fetch('/api/pay/vacnt/' + p.get('tid') + '/deposit', { method: 'POST' })

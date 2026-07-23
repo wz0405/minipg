@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -49,7 +50,8 @@ public class PaymentController {
     @GetMapping("/config")
     public Map<String, Object> config() {
         return Map.of("authStub", nicepayClient.authStub(), "keyinStub", nicepayClient.keyinStub(),
-                "kakaoDirect", kakaopayClient.enabled(), "phoneStub", danalpayClient.stubMode());
+                "kakaoDirect", kakaopayClient.enabled(), "phoneStub", danalpayClient.stubMode(),
+                "danalMerchantId", danalpayClient.cpid(), "danalClientKey", danalpayClient.clientKey());
     }
 
     /** 휴대폰 본인인증 요청 — 번호·통신사로 승인번호를 발송한다 (데모는 화면 표시). */
@@ -86,6 +88,62 @@ public class PaymentController {
         msg.put("authReqKey", body.get("authReqKey"));
         msg.put("authTid", body.get("authTid"));
         return payGateClient.call(msg);
+    }
+
+    /**
+     * 다날 결제창(SDK) 호출 준비 — reqId를 미리 만들어 두고 그걸 다날 orderId로 그대로 태운다.
+     * 콜백에서 orderId로 이 결제요청을 다시 찾아야 하므로, hosted 주문이 아니어도 항상 새 reqId를 발급한다.
+     */
+    @PostMapping("/phone/danal/start")
+    public Map<String, Object> phoneDanalStart(@RequestBody Map<String, Object> body) {
+        long amt = Long.parseLong(String.valueOf(body.get("amt")));
+        String reqId = "DNL" + UUID.randomUUID().toString().replace("-", "").substring(0, 21);
+        payReqMapper.insert(PayReq.builder()
+                .reqId(reqId)
+                .mchtId(String.valueOf(body.getOrDefault("mchtId", DEMO_MCHT_ID)))
+                .amt(amt)
+                .goodsNm(String.valueOf(body.getOrDefault("goodsNm", "휴대폰결제")))
+                .build());
+        return Map.of("reqId", reqId, "merchantId", danalpayClient.cpid(), "clientKey", danalpayClient.clientKey());
+    }
+
+    /**
+     * 다날 결제창 successUrl/failUrl — 다날이 사용자 브라우저를 통해 직접 폼 전송한다
+     * (모바일=GET, PC=POST). 서명 검증은 없다 — 다날 문서상 실제 신뢰 경계는 이다음
+     * 서버 승인(confirm) 호출이며, 이 프로젝트는 계약 시크릿키가 없어 그 호출이 스텁이다.
+     * 즉 인증창(SMS/PASS 등)은 실물이지만, 최종 위변조 방지는 실계약 전까지는 완전하지 않다.
+     */
+    @RequestMapping(value = "/phone/danal/callback", method = {RequestMethod.GET, RequestMethod.POST})
+    public ResponseEntity<Void> phoneDanalCallback(@RequestParam Map<String, String> p) {
+        String orderId = p.get("orderId");
+        PayReq req = orderId == null ? null : payReqMapper.selectById(orderId);
+        Map<String, Object> res;
+        if (req == null) {
+            res = Map.of("rsltCd", "1003", "rsltMsg", "결제요청 없음: " + orderId);
+        } else if (!"SUCCESS".equals(p.get("code"))) {
+            res = Map.of("rsltCd", "1508",
+                    "rsltMsg", p.getOrDefault("message", "휴대폰 본인인증에 실패했어요"));
+        } else {
+            // front→bld 전문엔 결제를 특정할 값(reqId=PAY_REQ pk, authTid=다날 콜백 거래번호)만 싣는다.
+            // 금액·가맹점·상품명 같은 실 데이터는 bld(PhoneConfirm)가 PAY_REQ를 직접 조회해 확정한다.
+            Map<String, Object> msg = new HashMap<>();
+            msg.put("cmd", "PHONE_CONFIRM");
+            msg.put("reqId", req.getReqId());
+            msg.put("authTid", p.get("transactionId"));
+            res = payGateClient.call(msg);
+        }
+        String location = UriComponentsBuilder.fromPath("/checkout-result.html")
+                .queryParam("rsltCd", nvl(res.get("rsltCd")))
+                .queryParam("rsltMsg", nvl(res.get("rsltMsg")))
+                .queryParam("tid", nvl(res.get("tid")))
+                .queryParam("amt", nvl(res.get("amt")))
+                .queryParam("payMethod", nvl(res.get("payMethod")))
+                .queryParam("danalTid", nvl(p.get("transactionId")))
+                .queryParam("carrier", nvl(p.get("carrier")))
+                .encode(StandardCharsets.UTF_8)
+                .build()
+                .toUriString();
+        return ResponseEntity.status(HttpStatus.FOUND).header(HttpHeaders.LOCATION, location).build();
     }
 
     /**
